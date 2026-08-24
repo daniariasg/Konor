@@ -1,2 +1,2 @@
 # Konor
-Sistema de centralización y organización de alumnos ayudantes. 
+Sistema de gestión y organización de alumnos ayudantes. 

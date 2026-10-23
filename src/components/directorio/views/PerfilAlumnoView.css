@@ -1,0 +1,452 @@
+/* ==========================================================================
+   Vista de Perfil de Alumno
+   ========================================================================== */
+.perfil-alumno-container {
+  width: 100%;
+  padding: 2.25rem 3rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Barra superior */
+.perfil-top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-volver-link {
+  background: transparent;
+  border: none;
+  color: #06113c;
+  font-size: 0.875rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  transition: color 0.15s ease;
+}
+
+.btn-volver-link:hover {
+  color: #43b0c4;
+}
+
+.btn-edit-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background-color: #ffffff;
+  border: 1px solid #94a3b8;
+  color: #06113c;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-edit-toggle:hover {
+  border-color: #43b0c4;
+  color: #43b0c4;
+  background-color: #f8fafc;
+}
+
+/* Toast de Éxito */
+.toast-success-banner {
+  position: relative;
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.toast-success-content {
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #065f46;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.toast-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background-color: #10b981;
+  width: 100%;
+  animation: decreaseProgress 4s linear forwards;
+}
+
+.toast-progress-bar.paused {
+  animation-play-state: paused;
+}
+
+@keyframes decreaseProgress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* Título con truncamiento estricto para nombres largos */
+.perfil-nombre-header {
+  margin: 0;
+  font-size: 1.875rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+  max-width: 100%;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tarjeta Superior: Información */
+.perfil-card-info {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 1.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.perfil-card-title {
+  margin: 0 0 1.25rem 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.perfil-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem 2rem;
+}
+
+.perfil-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.perfil-field-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.perfil-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 0.875rem;
+  font-size: 0.8125rem;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  color: #0f172a;
+  background-color: #ffffff;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+}
+
+.perfil-input:focus {
+  border-color: #43b0c4;
+}
+
+.perfil-input:disabled {
+  background-color: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.radio-group-jornada {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  height: 38px;
+}
+
+.radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+}
+
+.radio-option input[type="radio"] {
+  accent-color: #43b0c4;
+  cursor: pointer;
+}
+
+/* Sección Inferior */
+.perfil-bottom-split {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.75rem;
+  align-items: flex-start;
+}
+
+.card-historial {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  height: fit-content;
+}
+
+.split-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.split-card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.turnos-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.turnos-table th {
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  color: #475569;
+  font-weight: 600;
+  border-bottom: 2px solid #cbd5e1;
+  background-color: #f8fafc;
+}
+
+.turnos-table td {
+  padding: 0.625rem 0.75rem;
+  color: #334155;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.turnos-total-row td {
+  font-weight: 800;
+  color: #06113c;
+  background-color: #f1f5f9;
+  border-top: 2px solid #cbd5e1;
+}
+
+/* ==========================================================================
+   Tarjeta de Bitácora y Entradas Minimalistas
+   ========================================================================= */
+.card-bitacora {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.bitacora-list-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
+  margin-bottom: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.bitacora-list-box::-webkit-scrollbar {
+  width: 6px;
+}
+
+.bitacora-list-box::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bitacora-list-box::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.bitacora-item {
+  padding: 10px 12px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  transition: all 0.15s ease;
+}
+
+.bitacora-item-system {
+  background-color: #ffffff;
+  border-left: 3px solid #43b0c4;
+}
+
+.bitacora-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.bitacora-autor {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.bitacora-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bitacora-fecha {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.badge-sistema {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background-color: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  letter-spacing: 0.2px;
+}
+
+.bitacora-item-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.system-event-tag {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.system-tag-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #475569;
+}
+
+.system-tag-detail {
+  margin: 0;
+  font-size: 12px;
+  color: #0f172a;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.bitacora-manual-text {
+  margin: 0;
+  font-size: 12px;
+  color: #1e293b;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.btn-delete-comment {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-delete-comment:hover {
+  color: #ef4444;
+  background-color: #fee2e2;
+}
+
+.nueva-nota-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.nueva-nota-textarea {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.75rem;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  outline: none;
+  box-sizing: border-box;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.nueva-nota-textarea:focus {
+  border-color: #43b0c4;
+}
+
+.btn-guardar-nota {
+  align-self: flex-end;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background-color: #06113c;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.btn-guardar-nota:hover:not(:disabled) {
+  background-color: #0d1e5e;
+}
+
+.btn-guardar-nota:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

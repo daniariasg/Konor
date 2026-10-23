@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KONOR | Prototipo de turnos y asistencia | Versión 1.3</title>
+  <meta name="description" content="Prototipo interactivo de referencia de KONOR. Versión 1.3, 23 de octubre de 2026. Simula turnos y asistencia con datos de demostración.">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: #1e1e1e;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+      color: #1e293b;
+    }
+
+    /* Contenedor principal */
+    .app-container {
+      display: flex;
+      width: 100%;
+      max-width: 1200px;
+      min-height: 850px;
+      background-color: #ffffff;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Barra lateral (Sidebar) */
+    .sidebar {
+      width: 240px;
+      background-color: #06113C;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 28px 18px;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 40px;
+      padding-left: 8px;
+    }
+
+    .brand-icon {
+      width: 26px;
+      height: 26px;
+      border: 2px solid #43b0c4;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #43b0c4;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .nav-menu {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .nav-item:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+    }
+
+    .nav-item.active {
+      background-color: #43b0c4;
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .sidebar-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 16px;
+    }
+
+    /* Área principal */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: #ffffff;
+    }
+
+    /* Barra superior de simulación (para probar el día del evento) */
+    .sim-bar {
+      background-color: #0f172a;
+      color: #e2e8f0;
+      padding: 10px 40px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .sim-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-sim {
+      background-color: #334155;
+      color: #ffffff;
+      border: 1px solid #475569;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-sim.active-sim {
+      background-color: #16a34a;
+      border-color: #22c55e;
+    }
+
+    .btn-sim-quick {
+      background-color: transparent;
+      color: #38bdf8;
+      border: 1px dashed #38bdf8;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-sim-quick:hover {
+      background-color: rgba(56, 189, 248, 0.1);
+    }
+
+    /* Cabecera superior */
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 40px;
+      border-bottom: 1px solid #cbd5e1;
+    }
+
+    .top-header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .header-icons {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      color: #06113C;
+    }
+
+    .icon-btn {
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .avatar {
+      width: 52px;
+      height: 52px;
+      background-color: #162447;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 24px;
+    }
+
+    /* Cuerpo de la vista */
+    .content-body {
+      padding: 24px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 1;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #334155;
+      text-decoration: none;
+      font-weight: 500;
+      width: fit-content;
+      cursor: pointer;
+    }
+
+    .back-circle {
+      width: 20px;
+      height: 20px;
+      background-color: #06113C;
+      color: #ffffff;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+    /* Información del Turno y Controles de Búsqueda / Auto-asignación */
+    .shift-overview {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 16px;
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px 22px;
+    }
+
+    .shift-meta-group {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .meta-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .meta-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* Grupo derecho: Buscador + Botón Auto-asignar en 1 clic */
+    .assignment-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .search-wrapper {
+      position: relative;
+      width: 310px;
+    }
+
+    .search-wrapper input {
+      width: 100%;
+      padding: 10px 14px 10px 36px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #1e293b;
+      outline: none;
+      background-color: #ffffff;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-wrapper input:focus {
+      border-color: #43b0c4;
+      box-shadow: 0 0 0 3px rgba(67, 176, 196, 0.18);
+    }
+
+    .search-wrapper input:disabled {
+      background-color: #f1f5f9;
+      color: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    .search-wrapper .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #64748b;
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    /* Botón destacado: Auto-asignar los 5 con menos horas */
+    .btn-auto-assign {
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #ffffff;
+      background-color: #43b0c4;
+      border: 1.5px solid #43b0c4;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-auto-assign:hover:not(:disabled) {
+      background-color: #3699ab;
+      border-color: #3699ab;
+    }
+
+    .btn-auto-assign:disabled {
+      background-color: #e2e8f0;
+      border-color: #cbd5e1;
+      color: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    /* Resultados desplegables en el mismo buscador */
+    .search-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      width: 100%;
+      background-color: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+      max-height: 280px;
+      overflow-y: auto;
+      z-index: 50;
+      display: none;
+    }
+
+    .search-dropdown.active {
+      display: block;
+    }
+
+    .dropdown-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 13px;
+    }
+
+    .dropdown-item:last-child {
+      border-bottom: none;
+    }
+
+    .dropdown-item:hover {
+      background-color: #f8fafc;
+    }
+
+    .dropdown-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .dropdown-name {
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .dropdown-hours {
+      font-size: 11px;
+      color: #64748b;
+      font-family: monospace;
+    }
+
+    .btn-quick-add {
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      border: 1px solid #06113C;
+      background-color: #06113C;
+      color: #ffffff;
+      cursor: pointer;
+    }
+
+    .btn-quick-add:hover {
+      opacity: 0.9;
+    }
+
+    .status-in-table {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #0369a1;
+      background-color: #e0f2fe;
+      border: 1px solid #bae6fd;
+      border-radius: 6px;
+    }
+
+    .dropdown-empty {
+      padding: 14px;
+      text-align: center;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    /* Tarjeta de la lista de alumnos */
+    .list-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .list-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      background-color: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .list-card-header h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    /* Etiqueta de asignados con cambio de color según estado */
+    .badge-assigned {
+      font-size: 13px;
+      font-weight: 700;
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-family: monospace;
+      transition: all 0.25s ease;
+    }
+
+    .badge-assigned.state-empty {
+      background-color: #e2e8f0;
+      color: #475569;
+    }
+
+    .badge-assigned.state-partial {
+      background-color: #fde68a;
+      color: #b45309;
+    }
+
+    .badge-assigned.state-complete {
+      background-color: #bbf7d0;
+      color: #15803d;
+    }
+
+    /* Contenedor con scroll */
+    .table-scroll {
+      max-height: 410px;
+      overflow-y: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background-color: #ffffff;
+      z-index: 2;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 700;
+      color: #334155;
+      padding: 14px 24px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    thead th:last-child {
+      text-align: right;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.2s;
+    }
+
+    tbody tr:hover {
+      background-color: #f8fafc;
+    }
+
+    tbody tr.row-assigned {
+      background-color: #ecfdf5;
+      border-left: 4px solid #16a34a;
+    }
+
+    tbody tr.row-assigned:hover {
+      background-color: #d1fae5;
+    }
+
+    /* Fila de alumno que canceló turno */
+    tbody tr.row-cancelled {
+      background-color: #fff1f2;
+      border-left: 4px solid #e11d48;
+      color: #94a3b8;
+    }
+
+    tbody tr.row-cancelled td {
+      color: #64748b;
+    }
+
+    tbody td {
+      padding: 13px 24px;
+      font-size: 13px;
+      color: #1e293b;
+      font-weight: 600;
+    }
+
+    tbody tr.row-assigned td:first-child {
+      color: #065f46;
+      font-weight: 700;
+    }
+
+    /* Fila informativa cuando la tabla inicia vacía */
+    .empty-table-row td {
+      text-align: center;
+      padding: 48px 24px !important;
+      color: #64748b !important;
+      font-weight: 500 !important;
+      font-size: 14px !important;
+      background-color: #fcfcfd;
+    }
+
+    /* Etiqueta verde: Asignado */
+    .tag-pinned {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 9px;
+      font-size: 10px;
+      font-weight: 700;
+      background-color: #bbf7d0;
+      color: #15803d;
+      border: 1px solid #86efac;
+      border-radius: 999px;
+      vertical-align: middle;
+    }
+
+    /* Etiqueta gris/azul: En espera (Respaldo) */
+    .tag-backup {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 9px;
+      font-size: 10px;
+      font-weight: 700;
+      background-color: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+      border-radius: 999px;
+      vertical-align: middle;
+    }
+
+    /* Etiqueta roja: Canceló turno (Registrado en perfil) */
+    .tag-cancelled {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 9px;
+      font-size: 10px;
+      font-weight: 700;
+      background-color: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+      border-radius: 999px;
+      vertical-align: middle;
+    }
+
+    .cancel-reason-note {
+      display: block;
+      margin-top: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #be123c;
+      font-style: italic;
+    }
+
+    .hours-col {
+      font-family: 'Courier New', Courier, monospace;
+      color: #64748b;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .action-col {
+      text-align: right;
+    }
+
+    .row-actions-wrap {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    /* Botón discreto "✕" para quitar interesado de la tabla */
+    .btn-remove-interested {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      line-height: 1;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .btn-remove-interested:hover {
+      color: #dc2626;
+      background-color: #fee2e2;
+    }
+
+    /* Selectores editables de hora para la vista de Asistencia */
+    .time-editor-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .time-input {
+      padding: 5px 8px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      background-color: #ffffff;
+      outline: none;
+    }
+
+    .time-input:focus {
+      border-color: #43b0c4;
+      box-shadow: 0 0 0 2px rgba(67, 176, 196, 0.15);
+    }
+
+    .time-input:disabled {
+      background-color: #f1f5f9;
+      color: #94a3b8;
+      border-color: #e2e8f0;
+    }
+
+    .calc-pill {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background-color: #f1f5f9;
+      color: #475569;
+      font-family: monospace;
+    }
+
+    .calc-pill.modified {
+      background-color: #fef3c7;
+      color: #b45309;
+      font-weight: 700;
+    }
+
+    .calc-pill.absent {
+      background-color: #fee2e2;
+      color: #b91c1c;
+      font-weight: 700;
+    }
+
+    /* Checkbox al estilo Konor */
+    .student-check {
+      width: 20px;
+      height: 20px;
+      accent-color: #06113C;
+      cursor: pointer;
+      vertical-align: middle;
+    }
+
+    .student-check:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    /* Etiquetas de bloqueo en buscador */
+    .status-occupied {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #b91c1c;
+      background-color: #fee2e2;
+      border: 1px solid #fecaca;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .status-limit {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #9a3412;
+      background-color: #ffedd5;
+      border: 1px solid #fed7aa;
+      border-radius: 6px;
+    }
+
+    /* Aviso de lista cerrada e inmutable */
+    .closed-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    /* Botones inferiores */
+    .footer-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 16px;
+      margin-top: auto;
+      padding-top: 12px;
+    }
+
+    /* Botón sin color "Abrir lista" / "Cerrar lista" */
+    .btn-list-state {
+      padding: 11px 24px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      background-color: transparent;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      cursor: not-allowed;
+      transition: all 0.2s ease;
+    }
+
+    .btn-list-state.enabled {
+      color: #06113C;
+      border-color: #06113C;
+      cursor: pointer;
+    }
+
+    .btn-list-state.enabled:hover {
+      background-color: #f1f5f9;
+    }
+
+    /* Botón "Guardar turno" / "Editar turno" */
+    .btn-save-shift {
+      padding: 11px 26px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff;
+      background-color: #06113C;
+      border: 1.5px solid #06113C;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-save-shift:hover {
+      opacity: 0.92;
+    }
+
+    .btn-save-shift.edit-mode {
+      background-color: #ffffff;
+      color: #06113C;
+      border: 1.5px solid #06113C;
+    }
+
+    .btn-save-shift.edit-mode:hover {
+      background-color: #f8fafc;
+    }
+
+    /* Modal (Pop-up) de Trazabilidad de Cancelaciones */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(15, 23, 42, 0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background-color: #ffffff;
+      width: 100%;
+      max-width: 480px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      animation: modalFadeIn 0.18s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .modal-header {
+      padding: 18px 22px;
+      background-color: #06113C;
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .modal-body {
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .modal-question {
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .modal-option-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      background-color: #ffffff;
+    }
+
+    .modal-option-label:hover {
+      background-color: #f8fafc;
+    }
+
+    .modal-option-label.selected-option {
+      border-color: #06113C;
+      background-color: #f1f5f9;
+    }
+
+    .modal-option-label input[type="radio"] {
+      margin-top: 3px;
+      accent-color: #06113C;
+      cursor: pointer;
+    }
+
+    .option-text-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .option-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .option-desc {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .reason-input-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-left: 4px;
+    }
+
+    .reason-input-box label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    .reason-input-box input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #1e293b;
+      outline: none;
+    }
+
+    .reason-input-box input:focus {
+      border-color: #43b0c4;
+      box-shadow: 0 0 0 2px rgba(67, 176, 196, 0.15);
+    }
+
+    .modal-footer {
+      padding: 14px 22px;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .btn-modal-cancel {
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      background-color: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-modal-confirm {
+      padding: 8px 18px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #ffffff;
+      background-color: #06113C;
+      border: 1px solid #06113C;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .prototype-info {
+      background: #f1f5f9;
+      border-bottom: 1px solid #cbd5e1;
+      padding: 16px 24px;
+      color: #334155;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .prototype-info h2 { font-size: 16px; color: #06113C; margin-bottom: 4px; }
+    .prototype-info .prototype-version { color: #475569; font-size: 12px; margin-bottom: 6px; }
+    .prototype-info details { margin-top: 8px; }
+    .prototype-info summary { cursor: pointer; font-weight: 600; color: #06113C; }
+    .prototype-info ul { margin: 8px 0 0 20px; }
+    .prototype-info li { margin-bottom: 5px; }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- Menú Lateral -->
+  <aside class="sidebar">
+    <div>
+      <div class="brand">
+        <span class="brand-icon">✕</span>
+        <span>Konor</span>
+      </div>
+      <ul class="nav-menu">
+        <li class="nav-item">⊞ Dashboard</li>
+        <li class="nav-item active">📅 Eventos</li>
+        <li class="nav-item">👥 Alumnos Ayudantes</li>
+      </ul>
+    </div>
+    <div class="sidebar-footer">
+      <div class="nav-item">⚙️ Configuración</div>
+      <div class="nav-item">↪ Cerrar sesión</div>
+    </div>
+  </aside>
+
+  <!-- Contenido Principal -->
+  <main class="main-content">
+    <section class="prototype-info" aria-labelledby="prototype-title">
+      <h2 id="prototype-title">Prototipo interactivo de KONOR</h2>
+      <p class="prototype-version">Versión documental 1.3 · 23 de octubre de 2026 · Fase 2 · Catalina Benítez Bravo y Danitza Arias Garrido</p>
+      <p>Demostración del flujo de turnos, selección y asistencia. Utiliza datos de ejemplo en memoria, sin conexión a Supabase. Al recargar se reinicia la simulación.</p>
+      <details>
+        <summary>Alcance del prototipo y relación con la aplicación</summary>
+        <ul>
+          <li>Escenario ilustrativo: 52 perfiles de ejemplo, 5 cupos y un turno de 10:00 a 12:00 del 15/05/2026. La fecha es simulada; la aplicación permite definir horarios y cupos para cada turno.</li>
+          <li>Permite demostrar interesados, orden por horas, autoasignación, espera, motivos de baja, asistencia y cierre visual. Los elementos laterales representan la navegación del diseño; no implementan todos esos módulos.</li>
+          <li>La aplicación React documentada abre Turnos y Eventos y dispone de directorio, carga Excel y exportación básica. Dashboard, ledger y nómina financiera integral siguen programados.</li>
+          <li>El cierre ilustrado es un estado de pantalla. La persistencia, las reservas horarias y la inmutabilidad deben verificarse en la aplicación y su base de datos.</li>
+          <li>Referencia de implementación: repositorio daniariasg/Konor, main, commit 78d0dd8. Este HTML acompaña al flujo escrito 1.3 y a las 21 historias de usuario.</li>
+          <li>Las pruebas formales siguen programadas del 12 al 19 de noviembre y la marcha blanca del 20 al 30 de noviembre de 2026. Esta demostración no constituye sus resultados.</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- Barra de simulación para probar la tabla comparativa y el día del evento -->
+    <div class="sim-bar">
+      <div>
+        <strong>🛠️ Panel de Demostración:</strong> 
+        <span id="simStatusText">Fecha actual simulada: Previa al evento (Tabla comparativa de interesados)</span>
+      </div>
+      <div class="sim-controls">
+        <button type="button" class="btn-sim-quick" id="btnQuickFill" onclick="cargarOchoInteresadosDePrueba()">
+          ⚡ Cargar 8 interesados de prueba
+        </button>
+        <button type="button" class="btn-sim" id="btnToggleEventDay" onclick="alternarDiaDelEvento()">
+          📅 Simular que hoy es el Día del Evento (15/05/2026)
+        </button>
+      </div>
+    </div>
+
+    <!-- Cabecera -->
+    <header class="top-header">
+      <h1 id="pageTitle">Lista de turno: “Limpiar bodega”</h1>
+      <div class="header-icons">
+        <span class="icon-btn" title="Buscar">🔍</span>
+        <span class="icon-btn" title="Ayuda">❓</span>
+        <div class="avatar">👤</div>
+      </div>
+    </header>
+
+    <div class="content-body">
+      <!-- Volver -->
+      <a class="back-link" id="backLinkText" onclick="volverAVistaAsignacion()">
+        <span class="back-circle">‹</span>
+        <span id="backLinkLabel">Volver a lista de turnos</span>
+      </a>
+
+      <!-- Datos superiores del Turno + Buscador y Botón de Auto-asignación -->
+      <section class="shift-overview">
+        <div class="shift-meta-group">
+          <div class="meta-item">
+            <span class="meta-label">Nombre del Turno</span>
+            <span class="meta-value">Limpiar bodega</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Día del Evento</span>
+            <span class="meta-value">15/05/2026</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Hora Inicio</span>
+            <span class="meta-value">10:00</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Hora Salida</span>
+            <span class="meta-value">12:00 (2 hrs)</span>
+          </div>
+        </div>
+
+        <!-- Controles de Fase 1: Buscador para poblar tabla + Auto-asignar los 5 con menos horas -->
+        <div class="assignment-controls" id="assignmentControls">
+          <div class="search-wrapper" id="searchWrapper">
+            <span class="search-icon">🔍</span>
+            <input
+              type="text"
+              id="studentSearch"
+              placeholder="Buscar entre los 52 alumnos..."
+              autocomplete="off"
+              oninput="mostrarResultadosBusqueda()"
+              onfocus="mostrarResultadosBusqueda()"
+            >
+            <div class="search-dropdown" id="searchDropdown"></div>
+          </div>
+
+          <button
+            type="button"
+            class="btn-auto-assign"
+            id="btnAutoAssign"
+            disabled
+            onclick="autoAsignarCincoMenosHoras()"
+            title="Marca automáticamente a los 5 interesados de la tabla con menor cantidad de horas acumuladas"
+          >
+            ✓ Auto-asignar los 5 con menos horas
+          </button>
+        </div>
+      </section>
+
+      <!-- Banner que aparece cuando se cierra definitivamente la lista -->
+      <div class="closed-banner" id="closedBanner">
+        <span>🔒 Lista de asistencia cerrada y sellada. Las horas trabajadas han sido sumadas al perfil de los alumnos.</span>
+        <span style="font-family: monospace; font-size: 12px;">Estado: INMUTABLE</span>
+      </div>
+
+      <!-- Tarjeta con la tabla comparativa / asistencia -->
+      <section class="list-card">
+        <div class="list-card-header">
+          <h2 id="cardHeaderTitle">Bloque 10:00 - 12:00</h2>
+          <span class="badge-assigned state-empty" id="assignedCounter">0/5 asignados</span>
+        </div>
+
+        <div class="table-scroll">
+          <table id="studentsTable">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th id="colHoursHeader">Total de horas acumuladas</th>
+                <th id="colActionHeader">Asignar al turno</th>
+              </tr>
+            </thead>
+            <tbody id="studentsTableBody">
+              <!-- Se genera dinámicamente según la vista -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Botones de Acción Inferiores -->
+      <div class="footer-actions" id="footerActions">
+        <button
+          type="button"
+          class="btn-list-state"
+          id="btnOpenCloseList"
+          disabled
+          title="Guarda el turno y activa el Día del Evento para abrir la lista de asistencia"
+          onclick="manejarBotonLista()"
+        >
+          Abrir lista
+        </button>
+        <button type="button" class="btn-save-shift" id="btnSaveToggle" onclick="alternarGuardarEditar()">
+          Guardar turno
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal (Pop-up) para trazabilidad de cancelaciones cuando el turno ya fue guardado al menos una vez -->
+<div class="modal-overlay" id="cancelModalOverlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Trazabilidad de Desasignación</h3>
+    </div>
+    <div class="modal-body">
+      <p class="modal-question" id="modalStudentQuestion">¿Por qué se retira a Alumno del turno?</p>
+
+      <!-- Opción 1: El alumno canceló su asistencia -->
+      <label class="modal-option-label selected-option" id="labelOptionCancel" onclick="seleccionarOpcionModal('cancelo')">
+        <input type="radio" name="retiroMotivoTipo" id="radioCancelo" value="cancelo" checked>
+        <div class="option-text-group">
+          <span class="option-title">🚫 El alumno canceló su asistencia</span>
+          <span class="option-desc">Libera el cupo, lo mueve al final como evidencia y registra la baja en la bitácora de su perfil.</span>
+        </div>
+      </label>
+
+      <!-- Input opcional para el motivo de cancelación -->
+      <div class="reason-input-box" id="reasonInputContainer">
+        <label for="inputCancelReason">Motivo de la cancelación (opcional):</label>
+        <input
+          type="text"
+          id="inputCancelReason"
+          placeholder="Ej. Avisó por WhatsApp que no puede asistir"
+        >
+      </div>
+
+      <!-- Opción 2: Error administrativo al seleccionar -->
+      <label class="modal-option-label" id="labelOptionError" onclick="seleccionarOpcionModal('error')">
+        <input type="radio" name="retiroMotivoTipo" id="radioError" value="error">
+        <div class="option-text-group">
+          <span class="option-title">✎ Error administrativo al seleccionar</span>
+          <span class="option-desc">Devuelve al alumno al estado "En espera (Respaldo)" sin registrar falta en su perfil.</span>
+        </div>
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-modal-cancel" onclick="cerrarModalSinCambios()">Volver</button>
+      <button type="button" class="btn-modal-confirm" onclick="confirmarRetiroModal()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const CUPOS_NECESARIOS = 5;
+  const DURACION_TURNO = 2; // 10:00 a 12:00 = 2 horas
+  const LIMITE_MENSUAL = 60;
+  const HORA_MINIMA_BLOQUE = "10:00";
+
+  // Estados del flujo:
+  // 'asignacion' -> Tabla comparativa de interesados (inicia vacía)
+  // 'asistencia_abierta' -> Día del evento: muestra solo a los asignados (asignado === true)
+  // 'asistencia_cerrada' -> Lista cerrada e inmutable (desaparecen botones)
+  let vistaActual = 'asignacion';
+  let turnoGuardado = false;
+  let turnoYaFueGuardado = false; // Pasa a true la primera vez que se presiona "Guardar turno"
+  let esDiaDelEvento = false;
+  let idAlumnoEnModal = null; // Guarda temporalmente el alumno que se intenta desmarcar tras haber guardado
+
+  // Base interna de 52 alumnos con interesado: false, asignado: false, cancelado: false y motivoCancelacion: ""
+  const alumnos = [
+    { id: 1, nombre: "Pedro Lopez", horas: "00:00", horasNum: 0, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 2, nombre: "Jorge Herrera", horas: "01:00", horasNum: 1, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 3, nombre: "Lucas Hernandez", horas: "02:00", horasNum: 2, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 4, nombre: "Camila Rojas", horas: "06:00", horasNum: 6, estado: "ocupado", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 5, nombre: "Matías González", horas: "02:30", horasNum: 2.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 6, nombre: "Valentina Muñoz", horas: "03:00", horasNum: 3, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 7, nombre: "Sebastián Díaz", horas: "08:00", horasNum: 8, estado: "ocupado", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 8, nombre: "Francisca Soto", horas: "03:30", horasNum: 3.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 9, nombre: "Benjamín Contreras", horas: "04:00", horasNum: 4, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 10, nombre: "Martina Silva", horas: "04:00", horasNum: 4, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 11, nombre: "Vicente Martínez", horas: "04:30", horasNum: 4.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 12, nombre: "Catalina Sepúlveda", horas: "05:00", horasNum: 5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 13, nombre: "Joaquín Morales", horas: "05:00", horasNum: 5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 14, nombre: "Fernanda Rodríguez", horas: "05:30", horasNum: 5.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 15, nombre: "Diego Fuentes", horas: "06:00", horasNum: 6, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 16, nombre: "Javiera Valenzuela", horas: "06:30", horasNum: 6.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 17, nombre: "Tomás Araya", horas: "07:00", horasNum: 7, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 18, nombre: "Constanza Castillo", horas: "07:30", horasNum: 7.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 19, nombre: "Nicolás Tapia", horas: "08:00", horasNum: 8, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 20, nombre: "Antonia Reyes", horas: "08:30", horasNum: 8.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 21, nombre: "Ignacio Gutiérrez", horas: "09:00", horasNum: 9, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 22, nombre: "Sofía Castro", horas: "09:30", horasNum: 9.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 23, nombre: "Maximiliano Pizarro", horas: "10:00", horasNum: 10, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 24, nombre: "Isidora Álvarez", horas: "10:30", horasNum: 10.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 25, nombre: "Cristóbal Vásquez", horas: "11:00", horasNum: 11, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 26, nombre: "Florencia Sánchez", horas: "11:30", horasNum: 11.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 27, nombre: "Agustín Fernández", horas: "12:00", horasNum: 12, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 28, nombre: "Maite Ramírez", horas: "12:30", horasNum: 12.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 29, nombre: "Felipe Carrasco", horas: "13:00", horasNum: 13, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 30, nombre: "Josefa Gómez", horas: "13:30", horasNum: 13.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 31, nombre: "Gabriel Cortés", horas: "14:00", horasNum: 14, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 32, nombre: "Amanda Núñez", horas: "14:30", horasNum: 14.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 33, nombre: "Alonso Jara", horas: "15:00", horasNum: 15, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 34, nombre: "Emilia Vergara", horas: "15:30", horasNum: 15.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 35, nombre: "Bastián Rivera", horas: "16:00", horasNum: 16, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 36, nombre: "Trinidad Figueroa", horas: "16:30", horasNum: 16.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 37, nombre: "Rodrigo Riquelme", horas: "17:00", horasNum: 17, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 38, nombre: "Rocío García", horas: "17:30", horasNum: 17.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 39, nombre: "Simón Miranda", horas: "18:00", horasNum: 18, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 40, nombre: "Renata Bravo", horas: "18:30", horasNum: 18.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 41, nombre: "Pablo Vera", horas: "19:00", horasNum: 19, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 42, nombre: "Mía Molina", horas: "19:30", horasNum: 19.5, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 43, nombre: "Ángel Vega", horas: "20:00", horasNum: 20, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 44, nombre: "Paz Campos", horas: "21:00", horasNum: 21, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 45, nombre: "Esteban Sandoval", horas: "22:00", horasNum: 22, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 46, nombre: "Daniela Orellana", horas: "23:00", horasNum: 23, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 47, nombre: "Camilo Cárdenas", horas: "24:00", horasNum: 24, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 48, nombre: "Bárbara Olivares", horas: "25:00", horasNum: 25, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 49, nombre: "Fabián Alarcón", horas: "26:00", horasNum: 26, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 50, nombre: "Macarena Gallardo", horas: "27:00", horasNum: 27, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 51, nombre: "Loreto Garrido", horas: "28:00", horasNum: 28, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true },
+    { id: 52, nombre: "Roberto Sánchez", horas: "59:00", horasNum: 59, estado: "disponible", interesado: false, asignado: false, cancelado: false, motivoCancelacion: "", horaInicioReal: "10:00", horaFinReal: "12:00", asistio: true }
+  ];
+
+  // Calcula la diferencia de horas entre dos strings HH:MM
+  function calcularHorasDiferencia(inicio, fin) {
+    const [h1, m1] = inicio.split(':').map(Number);
+    const [h2, m2] = fin.split(':').map(Number);
+    const minutos = (h2 * 60 + m2) - (h1 * 60 + m1);
+    return Math.max(0, +(minutos / 60).toFixed(2));
+  }
+
+  // Renderiza la tabla según la fase ('asignacion', 'asistencia_abierta', 'asistencia_cerrada')
+  function renderizarTabla() {
+    const tbody = document.getElementById('studentsTableBody');
+    const colHoursHeader = document.getElementById('colHoursHeader');
+    const colActionHeader = document.getElementById('colActionHeader');
+    const pageTitle = document.getElementById('pageTitle');
+    const cardHeaderTitle = document.getElementById('cardHeaderTitle');
+    const assignmentControls = document.getElementById('assignmentControls');
+    const backLinkLabel = document.getElementById('backLinkLabel');
+
+    tbody.innerHTML = '';
+
+    // FASE 1: TABLA COMPARATIVA DE INTERESADOS (Solo muestra a quienes tienen interesado === true)
+    if (vistaActual === 'asignacion') {
+      pageTitle.textContent = 'Lista de turno: “Limpiar bodega”';
+      cardHeaderTitle.textContent = 'Bloque 10:00 - 12:00 (Tabla Comparativa de Interesados — Tope: 60 hrs)';
+      colHoursHeader.textContent = 'Total de horas acumuladas';
+      colActionHeader.textContent = 'Asignar al turno';
+      backLinkLabel.textContent = 'Volver a lista de turnos';
+      assignmentControls.style.display = 'flex';
+
+      // Ordena de MENOR A MAYOR horas (horasNum ascendente), pero dejando a quienes cancelaron al final de la tabla
+      const listaInteresados = alumnos
+        .filter(a => a.interesado)
+        .sort((a, b) => {
+          if (a.cancelado && !b.cancelado) return 1;
+          if (!a.cancelado && b.cancelado) return -1;
+          return a.horasNum - b.horasNum || a.id - b.id;
+        });
+
+      if (listaInteresados.length === 0) {
+        const trVacio = document.createElement('tr');
+        trVacio.className = 'empty-table-row';
+        trVacio.innerHTML = `
+          <td colspan="3">
+            Aún no hay alumnos interesados en este turno. Usa el buscador superior para agregar a quienes respondieron por WhatsApp y comparar sus horas.
+          </td>
+        `;
+        tbody.appendChild(trVacio);
+      } else {
+        listaInteresados.forEach(alumno => {
+          const tr = document.createElement('tr');
+          if (alumno.cancelado) {
+            tr.className = 'row-cancelled';
+          } else if (alumno.asignado) {
+            tr.className = 'row-assigned';
+          }
+
+          let etiquetaEstado = '';
+          let notaMotivoHTML = '';
+
+          if (alumno.cancelado) {
+            etiquetaEstado = '<span class="tag-cancelled">🚫 Canceló turno (Registrado en perfil)</span>';
+            if (alumno.motivoCancelacion) {
+              notaMotivoHTML = `<span class="cancel-reason-note">Motivo: "${alumno.motivoCancelacion}"</span>`;
+            }
+          } else if (alumno.asignado) {
+            etiquetaEstado = '<span class="tag-pinned">✓ Asignado</span>';
+          } else {
+            etiquetaEstado = '<span class="tag-backup">En espera (Respaldo)</span>';
+          }
+
+          // El botón "✕" solo se muestra si el turno no está guardado y el alumno no tiene una cancelación registrada
+          const botonQuitar = (!turnoGuardado && !alumno.cancelado)
+            ? `<button type="button" class="btn-remove-interested" title="Quitar de la lista de interesados" onclick="quitarInteresadoDeTabla(${alumno.id})">✕</button>`
+            : '';
+
+          tr.innerHTML = `
+            <td>
+              ${alumno.nombre}
+              ${etiquetaEstado}
+              ${notaMotivoHTML}
+            </td>
+            <td class="hours-col">${alumno.horas} hrs</td>
+            <td class="action-col">
+              <div class="row-actions-wrap">
+                <input
+                  type="checkbox"
+                  class="student-check"
+                  ${alumno.asignado ? 'checked' : ''}
+                  ${(turnoGuardado || alumno.cancelado) ? 'disabled' : ''}
+                  onchange="alternarAsignacion(${alumno.id}, this)"
+                >
+                ${botonQuitar}
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+    }
+    // FASE 2 y 3: LISTA DE ASISTENCIA (Muestra únicamente a quienes tenían asignado === true)
+    else {
+      const esCerrada = (vistaActual === 'asistencia_cerrada');
+      pageTitle.textContent = 'Lista de asistencia: “Limpiar bodega”';
+      cardHeaderTitle.textContent = 'Bloque 10:00 - 12:00';
+      colHoursHeader.textContent = 'Hora trabajada';
+      colActionHeader.textContent = 'Asistencia';
+      backLinkLabel.textContent = 'Volver a lista de asignación';
+      assignmentControls.style.display = 'none';
+
+      const listaAsignados = alumnos
+        .filter(a => a.asignado)
+        .sort((a, b) => a.horasNum - b.horasNum || a.id - b.id);
+
+      listaAsignados.forEach(alumno => {
+        const tr = document.createElement('tr');
+        const horasCalculadas = alumno.asistio ? calcularHorasDiferencia(alumno.horaInicioReal, alumno.horaFinReal) : 0;
+        const fueModificada = (alumno.horaInicioReal !== "10:00" || alumno.horaFinReal !== "12:00");
+
+        let columnaHoraHTML = '';
+        if (esCerrada) {
+          columnaHoraHTML = alumno.asistio 
+            ? `<span class="hours-col">${alumno.horaInicioReal}-${alumno.horaFinReal} (${horasCalculadas} hrs)</span>`
+            : `<span class="calc-pill absent">Ausente (0 hrs)</span>`;
+        } else {
+          columnaHoraHTML = `
+            <div class="time-editor-group">
+              <input
+                type="time"
+                id="inicio-${alumno.id}"
+                class="time-input"
+                min="10:00"
+                value="${alumno.horaInicioReal}"
+                ${!alumno.asistio ? 'disabled' : ''}
+                onblur="validarYActualizarHora(${alumno.id}, 'inicio', this)"
+                onkeydown="if(event.key === 'Enter') this.blur()"
+              >
+              <span>-</span>
+              <input
+                type="time"
+                id="fin-${alumno.id}"
+                class="time-input"
+                min="10:00"
+                value="${alumno.horaFinReal}"
+                ${!alumno.asistio ? 'disabled' : ''}
+                onblur="validarYActualizarHora(${alumno.id}, 'fin', this)"
+                onkeydown="if(event.key === 'Enter') this.blur()"
+              >
+              <span id="pill-${alumno.id}" class="calc-pill ${!alumno.asistio ? 'absent' : (fueModificada ? 'modified' : '')}">
+                ${alumno.asistio ? horasCalculadas + ' hrs' : 'Ausente'}
+              </span>
+            </div>
+          `;
+        }
+
+        tr.innerHTML = `
+          <td>${alumno.nombre}</td>
+          <td>${columnaHoraHTML}</td>
+          <td class="action-col">
+            <input type="checkbox" class="student-check" ${alumno.asistio ? 'checked' : ''} ${esCerrada ? 'disabled' : ''} onchange="alternarAsistencia(${alumno.id}, this.checked)">
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    actualizarContador();
+    actualizarEstadoBotonAutoAsignar();
+    actualizarEstadoBotonLista();
+  }
+
+  // Agrega un alumno desde el buscador a la tabla comparativa (interesado: true, asignado: false)
+  function agregarInteresadoATabla(id) {
+    if (turnoGuardado || vistaActual !== 'asignacion') return;
+
+    const alumno = alumnos.find(a => a.id === id);
+    if (!alumno) return;
+
+    alumno.interesado = true;
+    alumno.asignado = false;
+    alumno.cancelado = false;
+    alumno.motivoCancelacion = "";
+    renderizarTabla();
+
+    const input = document.getElementById('studentSearch');
+    input.value = '';
+    document.getElementById('searchDropdown').classList.remove('active');
+    input.focus();
+  }
+
+  // Quita a un interesado de la tabla
+  function quitarInteresadoDeTabla(id) {
+    if (turnoGuardado || vistaActual !== 'asignacion') return;
+
+    const alumno = alumnos.find(a => a.id === id);
+    if (!alumno) return;
+
+    // Si el alumno ya estaba asignado y el turno ya fue guardado antes, exige trazabilidad en el modal
+    if (turnoYaFueGuardado && alumno.asignado) {
+      abrirModalTrazabilidad(alumno.id);
+      return;
+    }
+
+    alumno.interesado = false;
+    alumno.asignado = false;
+    alumno.cancelado = false;
+    alumno.motivoCancelacion = "";
+    renderizarTabla();
+  }
+
+  // Botón de 1 clic: Auto-asigna a los primeros 5 interesados disponibles (no cancelados) con menor cantidad de horas
+  function autoAsignarCincoMenosHoras() {
+    if (turnoGuardado || vistaActual !== 'asignacion') return;
+
+    const interesadosActivos = alumnos
+      .filter(a => a.interesado && !a.cancelado)
+      .sort((a, b) => a.horasNum - b.horasNum || a.id - b.id);
+
+    if (interesadosActivos.length === 0) return;
+
+    // Si el turno aún no ha sido guardado nunca, asigna libremente a los 5 con menos horas
+    if (!turnoYaFueGuardado) {
+      interesadosActivos.forEach(a => { a.asignado = false; });
+      interesadosActivos.slice(0, CUPOS_NECESARIOS).forEach(alumno => {
+        alumno.asignado = true;
+      });
+    } else {
+      // Si ya fue guardado antes, rellena los cupos faltantes hasta 5 con los siguientes en espera sin desmarcar en silencio a los ya confirmados
+      let actuales = alumnos.filter(a => a.asignado).length;
+      for (const alumno of interesadosActivos) {
+        if (!alumno.asignado && actuales < CUPOS_NECESARIOS) {
+          alumno.asignado = true;
+          actuales++;
+        }
+      }
+    }
+
+    renderizarTabla();
+  }
+
+  // Habilita o deshabilita el botón "✓ Auto-asignar los 5 con menos horas"
+  function actualizarEstadoBotonAutoAsignar() {
+    const btnAuto = document.getElementById('btnAutoAssign');
+    if (!btnAuto) return;
+    const totalInteresadosActivos = alumnos.filter(a => a.interesado && !a.cancelado).length;
+    btnAuto.disabled = (turnoGuardado || totalInteresadosActivos === 0 || vistaActual !== 'asignacion');
+  }
+
+  // Marca o desmarca el checkbox de asignación dentro de la tabla
+  function alternarAsignacion(id, checkboxElement) {
+    if (turnoGuardado || vistaActual !== 'asignacion') return;
+
+    const alumno = alumnos.find(a => a.id === id);
+    if (!alumno || alumno.cancelado) return;
+
+    // Si el turno ya fue guardado al menos una vez y se intenta desmarcar a un alumno que tenía asignado: true
+    if (alumno.asignado && turnoYaFueGuardado) {
+      // Mantiene visualmente el check hasta que decida en el modal
+      if (checkboxElement) checkboxElement.checked = true;
+      abrirModalTrazabilidad(alumno.id);
+      return;
+    }
+
+    const totalAsignados = alumnos.filter(a => a.asignado).length;
+
+    if (!alumno.asignado && totalAsignados >= CUPOS_NECESARIOS) {
+      alert(`Ya alcanzaste el máximo de ${CUPOS_NECESARIOS}/${CUPOS_NECESARIOS} personas requeridas para este turno.`);
+      renderizarTabla();
+      return;
+    }
+
+    alumno.asignado = !alumno.asignado;
+    renderizarTabla();
+  }
+
+  // Abre el modal limpio preguntando por qué se retira al alumno del turno
+  function abrirModalTrazabilidad(id) {
+    const alumno = alumnos.find(a => a.id === id);
+    if (!alumno) return;
+
+    idAlumnoEnModal = id;
+    document.getElementById('modalStudentQuestion').textContent = `¿Por qué se retira a ${alumno.nombre} del turno?`;
+    document.getElementById('inputCancelReason').value = '';
+    seleccionarOpcionModal('cancelo');
+    document.getElementById('cancelModalOverlay').classList.add('active');
+  }
+
+  // Alterna visualmente entre la Opción 1 (Canceló) y la Opción 2 (Error administrativo)
+  function seleccionarOpcionModal(tipo) {
+    const radioCancelo = document.getElementById('radioCancelo');
+    const radioError = document.getElementById('radioError');
+    const labelCancel = document.getElementById('labelOptionCancel');
+    const labelError = document.getElementById('labelOptionError');
+    const reasonContainer = document.getElementById('reasonInputContainer');
+
+    if (tipo === 'cancelo') {
+      radioCancelo.checked = true;
+      labelCancel.classList.add('selected-option');
+      labelError.classList.remove('selected-option');
+      reasonContainer.style.display = 'flex';
+    } else {
+      radioError.checked = true;
+      labelError.classList.add('selected-option');
+      labelCancel.classList.remove('selected-option');
+      reasonContainer.style.display = 'none';
+    }
+  }
+
+  // Cierra el modal sin desmarcar al alumno
+  function cerrarModalSinCambios() {
+    idAlumnoEnModal = null;
+    document.getElementById('cancelModalOverlay').classList.remove('active');
+    renderizarTabla();
+  }
+
+  // Confirma la opción elegida en el modal
+  function confirmarRetiroModal() {
+    if (idAlumnoEnModal === null) return;
+    const alumno = alumnos.find(a => a.id === idAlumnoEnModal);
+    if (!alumno) return;
+
+    const esCancelacionAlumno = document.getElementById('radioCancelo').checked;
+    const motivoTexto = document.getElementById('inputCancelReason').value.trim();
+
+    if (esCancelacionAlumno) {
+      // Opción 1: Pasa a asignado: false, cancelado: true, guarda motivo y se va al final bloqueado
+      alumno.asignado = false;
+      alumno.cancelado = true;
+      alumno.motivoCancelacion = motivoTexto;
+    } else {
+      // Opción 2: Error administrativo -> Pasa a asignado: false y vuelve a "En espera (Respaldo)" sin marca de cancelación
+      alumno.asignado = false;
+      alumno.cancelado = false;
+      alumno.motivoCancelacion = "";
+    }
+
+    idAlumnoEnModal = null;
+    document.getElementById('cancelModalOverlay').classList.remove('active');
+    renderizarTabla();
+  }
+
+  // Buscador superior entre los 52 alumnos de la base interna
+  function mostrarResultadosBusqueda() {
+    if (turnoGuardado || vistaActual !== 'asignacion') return;
+
+    const input = document.getElementById('studentSearch');
+    const dropdown = document.getElementById('searchDropdown');
+    const texto = input.value.trim().toLowerCase();
+
+    if (texto.length === 0) {
+      dropdown.classList.remove('active');
+      dropdown.innerHTML = '';
+      return;
+    }
+
+    const coincidencias = alumnos.filter(a => a.nombre.toLowerCase().includes(texto));
+    dropdown.innerHTML = '';
+
+    if (coincidencias.length === 0) {
+      dropdown.innerHTML = `<div class="dropdown-empty">No se encontraron alumnos con "${input.value}"</div>`;
+      dropdown.classList.add('active');
+      return;
+    }
+
+    coincidencias.forEach(alumno => {
+      const item = document.createElement('div');
+      item.className = 'dropdown-item';
+      const superaLimite = (alumno.horasNum + DURACION_TURNO) > LIMITE_MENSUAL;
+
+      let botonAccion = '';
+      if (alumno.estado === 'ocupado') {
+        botonAccion = `<span class="status-occupied">Ocupado</span>`;
+      } else if (superaLimite) {
+        botonAccion = `<span class="status-limit">Supera límite (60h)</span>`;
+      } else if (alumno.cancelado) {
+        botonAccion = `<span class="status-occupied">Canceló turno</span>`;
+      } else if (alumno.interesado) {
+        botonAccion = `<span class="status-in-table">En la tabla</span>`;
+      } else {
+        botonAccion = `<button type="button" class="btn-quick-add" onclick="agregarInteresadoATabla(${alumno.id})">+ Agregar a lista</button>`;
+      }
+
+      item.innerHTML = `
+        <div class="dropdown-info">
+          <span class="dropdown-name">${alumno.nombre}</span>
+          <span class="dropdown-hours">Horas acumuladas: ${alumno.horas} hrs</span>
+        </div>
+        <div>${botonAccion}</div>
+      `;
+      dropdown.appendChild(item);
+    });
+
+    dropdown.classList.add('active');
+  }
+
+  // Valida la hora de entrada y salida en la vista de Asistencia
+  function validarYActualizarHora(id, tipo, inputElement) {
+    const alumno = alumnos.find(a => a.id === id);
+    if (!alumno) return;
+
+    const nuevoValor = inputElement.value;
+
+    if (!nuevoValor) {
+      inputElement.value = (tipo === 'inicio') ? alumno.horaInicioReal : alumno.horaFinReal;
+      return;
+    }
+
+    // Regla 1: Ni la hora de entrada ni la de salida pueden ser menores a 10:00
+    if (nuevoValor < HORA_MINIMA_BLOQUE) {
+      alert(`Error: La hora de ${tipo === 'inicio' ? 'entrada' : 'salida'} (${nuevoValor}) no puede ser menor a las 10:00.`);
+      inputElement.value = (tipo === 'inicio') ? alumno.horaInicioReal : alumno.horaFinReal;
+      return;
+    }
+
+    // Regla 2: SOLO en la entrada, si es superior a la hora de salida, se bloquea y avisa
+    if (tipo === 'inicio' && nuevoValor > alumno.horaFinReal) {
+      alert(`Error: La hora de entrada (${nuevoValor}) no puede ser superior a la hora de salida (${alumno.horaFinReal}).`);
+      inputElement.value = alumno.horaInicioReal;
+      return;
+    }
+
+    if (tipo === 'inicio') {
+      alumno.horaInicioReal = nuevoValor;
+    } else {
+      alumno.horaFinReal = nuevoValor;
+    }
+
+    const pill = document.getElementById(`pill-${alumno.id}`);
+    if (pill) {
+      const horasCalculadas = alumno.asistio ? calcularHorasDiferencia(alumno.horaInicioReal, alumno.horaFinReal) : 0;
+      const fueModificada = (alumno.horaInicioReal !== "10:00" || alumno.horaFinReal !== "12:00");
+      pill.textContent = alumno.asistio ? `${horasCalculadas} hrs` : 'Ausente';
+      pill.className = `calc-pill ${!alumno.asistio ? 'absent' : (fueModificada ? 'modified' : '')}`;
+    }
+  }
+
+  // Marca o desmarca la asistencia el día del evento
+  function alternarAsistencia(id, asistio) {
+    const alumno = alumnos.find(a => a.id === id);
+    if (!alumno) return;
+    alumno.asistio = asistio;
+    renderizarTabla();
+  }
+
+  // Actualiza el badge superior (0/5 asignados) con sus colores (Gris, Amarillo, Verde)
+  function actualizarContador() {
+    const seleccionados = alumnos.filter(a => a.asignado).length;
+    const badge = document.getElementById('assignedCounter');
+
+    if (vistaActual === 'asignacion') {
+      badge.textContent = `${seleccionados}/${CUPOS_NECESARIOS} asignados`;
+    } else {
+      badge.textContent = `${seleccionados} asignados`;
+    }
+
+    badge.classList.remove('state-empty', 'state-partial', 'state-complete');
+
+    if (seleccionados === 0) {
+      badge.classList.add('state-empty');
+    } else if (seleccionados < CUPOS_NECESARIOS) {
+      badge.classList.add('state-partial');
+    } else {
+      badge.classList.add('state-complete');
+    }
+  }
+
+  // Alterna el botón entre "Guardar turno" y "✎ Editar turno" (activando turnoYaFueGuardado = true la primera vez)
+  function alternarGuardarEditar() {
+    const seleccionados = alumnos.filter(a => a.asignado).length;
+    if (!turnoGuardado && seleccionados === 0) {
+      alert('Selecciona al menos a un alumno (o usa el botón "✓ Auto-asignar los 5 con menos horas") antes de guardar el turno.');
+      return;
+    }
+
+    const btn = document.getElementById('btnSaveToggle');
+    const searchInput = document.getElementById('studentSearch');
+    const dropdown = document.getElementById('searchDropdown');
+
+    turnoGuardado = !turnoGuardado;
+
+    if (turnoGuardado) {
+      turnoYaFueGuardado = true; // Activa la trazabilidad de cancelaciones de aquí en adelante
+      btn.innerHTML = '✎ Editar turno';
+      btn.classList.add('edit-mode');
+      searchInput.value = '';
+      searchInput.disabled = true;
+      searchInput.placeholder = 'Turno guardado (Presiona "Editar turno" para modificar)';
+      dropdown.classList.remove('active');
+    } else {
+      btn.innerHTML = 'Guardar turno';
+      btn.classList.remove('edit-mode');
+      searchInput.disabled = false;
+      searchInput.placeholder = 'Buscar entre los 52 alumnos...';
+    }
+
+    renderizarTabla();
+  }
+
+  // Botón de prueba rápida: Reinicia el turno y carga 8 interesados de distintas horas
+  function cargarOchoInteresadosDePrueba() {
+    if (vistaActual !== 'asignacion') return;
+
+    turnoGuardado = false;
+    turnoYaFueGuardado = false;
+    const btn = document.getElementById('btnSaveToggle');
+    const searchInput = document.getElementById('studentSearch');
+    btn.innerHTML = 'Guardar turno';
+    btn.classList.remove('edit-mode');
+    searchInput.disabled = false;
+    searchInput.placeholder = 'Buscar entre los 52 alumnos...';
+
+    alumnos.forEach(a => {
+      a.interesado = false;
+      a.asignado = false;
+      a.cancelado = false;
+      a.motivoCancelacion = "";
+    });
+
+    const idsPrueba = [1, 3, 6, 9, 14, 19, 25, 33]; // 0h, 2h, 3h, 4h, 5.5h, 8h, 11h, 15h
+    idsPrueba.forEach(id => {
+      const al = alumnos.find(a => a.id === id);
+      if (al) al.interesado = true;
+    });
+
+    renderizarTabla();
+  }
+
+  // Simula que llegó el día del evento (15/05/2026) para activar el botón "Abrir lista"
+  function alternarDiaDelEvento() {
+    esDiaDelEvento = !esDiaDelEvento;
+    const btnSim = document.getElementById('btnToggleEventDay');
+    const simStatusText = document.getElementById('simStatusText');
+
+    if (esDiaDelEvento) {
+      btnSim.classList.add('active-sim');
+      btnSim.textContent = '✅ Día del Evento Activo (15/05/2026)';
+      simStatusText.textContent = 'Fecha actual simulada: 15/05/2026 (Día del evento - "Abrir lista" habilitado)';
+    } else {
+      btnSim.classList.remove('active-sim');
+      btnSim.textContent = '📅 Simular que hoy es el Día del Evento (15/05/2026)';
+      simStatusText.textContent = 'Fecha actual simulada: Previa al evento (Tabla comparativa de interesados)';
+    }
+
+    actualizarEstadoBotonLista();
+  }
+
+  // Controla si el botón sin color ("Abrir lista" / "Cerrar lista") está habilitado
+  function actualizarEstadoBotonLista() {
+    const btnLista = document.getElementById('btnOpenCloseList');
+    const seleccionados = alumnos.filter(a => a.asignado).length;
+
+    if (vistaActual === 'asignacion') {
+      btnLista.textContent = 'Abrir lista';
+      if (esDiaDelEvento && turnoGuardado && seleccionados > 0) {
+        btnLista.disabled = false;
+        btnLista.classList.add('enabled');
+        btnLista.title = 'Haz clic para abrir la lista de asistencia del día del evento';
+      } else {
+        btnLista.disabled = true;
+        btnLista.classList.remove('enabled');
+        btnLista.title = 'Debes guardar el turno y estar en el día del evento (15/05/2026) para abrir la lista';
+      }
+    } else if (vistaActual === 'asistencia_abierta') {
+      btnLista.textContent = 'Cerrar lista';
+      btnLista.disabled = false;
+      btnLista.classList.add('enabled');
+      btnLista.title = 'Cerrar y sellar definitivamente la asistencia';
+    }
+  }
+
+  // Maneja el clic en "Abrir lista" -> pasa a "Cerrar lista" -> al cerrar desaparecen todos los botones
+  function manejarBotonLista() {
+    const btnSave = document.getElementById('btnSaveToggle');
+    const footerActions = document.getElementById('footerActions');
+    const closedBanner = document.getElementById('closedBanner');
+    const btnQuickFill = document.getElementById('btnQuickFill');
+    const btnToggleEventDay = document.getElementById('btnToggleEventDay');
+
+    if (vistaActual === 'asignacion') {
+      vistaActual = 'asistencia_abierta';
+      btnSave.style.display = 'none';
+      btnQuickFill.style.display = 'none';
+      renderizarTabla();
+    } else if (vistaActual === 'asistencia_abierta') {
+      vistaActual = 'asistencia_cerrada';
+      footerActions.style.display = 'none';
+      closedBanner.style.display = 'flex';
+      btnToggleEventDay.style.display = 'none';
+      document.getElementById('simStatusText').textContent = 'Turno finalizado y asistencia cerrada.';
+      renderizarTabla();
+    }
+  }
+
+  // Permite volver a la vista de asignación si la lista aún no se ha cerrado definitivamente
+  function volverAVistaAsignacion() {
+    if (vistaActual === 'asistencia_abierta') {
+      vistaActual = 'asignacion';
+      document.getElementById('btnSaveToggle').style.display = 'inline-block';
+      document.getElementById('btnQuickFill').style.display = 'inline-block';
+      renderizarTabla();
+    }
+  }
+
+  // Cierra el desplegable del buscador al hacer clic fuera
+  document.addEventListener('click', function(e) {
+    const wrapper = document.getElementById('searchWrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+      document.getElementById('searchDropdown').classList.remove('active');
+    }
+  });
+
+  // Inicializar tabla al cargar
+  renderizarTabla();
+</script>
+
+</body>
+</html>

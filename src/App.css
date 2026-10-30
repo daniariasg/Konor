@@ -1,15 +1,42 @@
+/* ====================================================================
+   RESET GLOBAL Y CONTENCIÓN DE VIEWPORT
+   ==================================================================== */
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 /* Layout Shell Principal */
 .konor-app-layout {
   display: flex;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
   background-color: #f8fafc;
   color: #1e293b;
-  font-family: inherit;
+  position: relative;
 }
 
-/* Sidebar Institucional (240px fijos) */
+/* ====================================================================
+   SIDEBAR INSTITUCIONAL (240px DESKTOP / DRAWER MÓVIL)
+   ==================================================================== */
 .konor-sidebar {
   width: 240px;
   min-width: 240px;
@@ -19,13 +46,14 @@
   color: #ffffff;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #1e293b;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   box-sizing: border-box;
   user-select: none;
-  z-index: 20;
+  z-index: 50;
+  flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Marca / Cabecera Sidebar */
 .konor-sidebar-brand {
   height: 64px;
   display: flex;
@@ -33,6 +61,13 @@
   justify-content: space-between;
   padding: 0 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.konor-brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .konor-brand-title {
@@ -42,17 +77,17 @@
   color: #ffffff;
 }
 
-.konor-brand-badge {
-  font-size: 0.7rem;
-  background-color: #43b0c4;
-  color: #06113c;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  font-weight: 700;
-  text-transform: uppercase;
+.konor-mobile-close {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
 }
 
-/* Navegación */
+/* Elementos de Navegación */
 .konor-sidebar-nav {
   flex: 1;
   padding: 16px 12px;
@@ -67,6 +102,7 @@
   align-items: center;
   gap: 12px;
   width: 100%;
+  min-height: 44px; /* Touch target accesible */
   padding: 10px 14px;
   background: transparent;
   border: none;
@@ -77,7 +113,6 @@
   text-align: left;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
-  box-sizing: border-box;
 }
 
 .konor-nav-item:hover:not(.disabled) {
@@ -125,6 +160,7 @@
   align-items: center;
   justify-content: space-between;
   background-color: rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
 }
 
 .konor-user-info {
@@ -137,23 +173,28 @@
 .konor-user-email {
   font-size: 0.8rem;
   color: #f1f5f9;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.konor-user-role {
+.konor-user-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.7rem;
   color: #43b0c4;
+  font-weight: 600;
 }
 
 .konor-logout-btn {
   background: transparent;
   border: none;
   color: #94a3b8;
-  padding: 8px;
-  border-radius: 6px;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -166,7 +207,9 @@
   color: #ef4444;
 }
 
-/* Contenido Principal con Scroll Independiente */
+/* ====================================================================
+   ÁREA DE CONTENIDO PRINCIPAL Y SCROLL
+   ==================================================================== */
 .konor-main-content {
   flex: 1;
   height: 100vh;
@@ -184,7 +227,85 @@
   box-sizing: border-box;
 }
 
-/* Pantalla de Carga Global */
+/* Scrollbar estilizada */
+.konor-main-content::-webkit-scrollbar,
+.konor-sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.konor-main-content::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 3px;
+}
+.konor-sidebar-nav::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+/* ====================================================================
+   BOTÓN HAMBURGUESA Y ADAPTABILIDAD MÓVIL (< 1024px)
+   ==================================================================== */
+.konor-mobile-toggle {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #06113c;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  z-index: 60;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+
+.konor-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-color: rgba(6, 17, 60, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 45;
+}
+
+@media (max-width: 1024px) {
+  .konor-mobile-toggle {
+    display: flex;
+  }
+
+  .konor-mobile-close {
+    display: flex;
+  }
+
+  .konor-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .konor-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .konor-sidebar-backdrop {
+    display: block;
+  }
+
+  .konor-content-container {
+    padding: 20px 16px;
+  }
+}
+
+/* ====================================================================
+   PANTALLA DE CARGA
+   ==================================================================== */
 .konor-loading-screen {
   display: flex;
   align-items: center;

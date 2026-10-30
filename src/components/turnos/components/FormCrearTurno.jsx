@@ -1,225 +1,265 @@
-import React, { useState, useMemo } from 'react';
-import { createTurno } from '../../../services/turnosService.js';
-import { ArrowLeft, Loader2, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { crearTurno, createTurno } from '../../../services/turnosService.js';
+import { 
+  Calendar, 
+  Clock, 
+  Users, 
+  FileText, 
+  X, 
+  Plus, 
+  AlertCircle, 
+  Loader2 
+} from 'lucide-react';
+import './FormCrearTurno.css';
 
-function calcularHorariosLocalesIniciales() {
-  const ahora = new Date();
-  const pad = (n) => String(n).padStart(2, '0');
-
-  const fechaLocal = `${ahora.getFullYear()}-${pad(ahora.getMonth() + 1)}-${pad(ahora.getDate())}`;
-
-  const minutos = ahora.getMinutes();
-  let inicio = new Date(ahora);
-
-  if (minutos > 0 && minutos <= 30) {
-    inicio.setMinutes(30, 0, 0);
-  } else if (minutos > 30) {
-    inicio.setHours(inicio.getHours() + 1, 0, 0, 0);
-  } else {
-    inicio.setMinutes(0, 0, 0);
-  }
-
-  const horaInicioStr = `${pad(inicio.getHours())}:${pad(inicio.getMinutes())}`;
-  const fin = new Date(inicio.getTime() + 2 * 60 * 60 * 1000);
-  const horaTerminoStr = `${pad(fin.getHours())}:${pad(fin.getMinutes())}`;
-
-  return {
-    fecha: fechaLocal,
-    hora_inicio: horaInicioStr,
-    hora_termino: horaTerminoStr,
-  };
-}
-
-export default function FormCrearTurno({ onVolver, onTurnoCreado }) {
-  const [formData, setFormData] = useState(() => {
-    const horarios = calcularHorariosLocalesIniciales();
-    return {
-      nombre_evento: '',
-      fecha: horarios.fecha,
-      hora_inicio: horarios.hora_inicio,
-      hora_termino: horarios.hora_termino,
-      cupos: 5,
-    };
+export default function FormCrearTurno({ onCerrar, onVolver, onTurnoCreado }) {
+  const [formData, setFormData] = useState({
+    nombre_evento: '',
+    fecha: '',
+    hora_inicio: '',
+    hora_termino: '',
+    cupos: 5
   });
-
+  const [errorMsg, setErrorMsg] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  const [errorValidacion, setErrorValidacion] = useState(null);
 
-  const duracionHoras = useMemo(() => {
+  const handleCerrar = () => {
+    if (typeof onCerrar === 'function') {
+      onCerrar();
+    } else if (typeof onVolver === 'function') {
+      onVolver();
+    }
+  };
+
+  const handleChange = (campo, valor) => {
+    setFormData((prev) => ({ ...prev, [campo]: valor }));
+  };
+
+  const calcularDuracion = () => {
     if (!formData.hora_inicio || !formData.hora_termino) return 0;
     const [hIni, mIni] = formData.hora_inicio.split(':').map(Number);
     const [hFin, mFin] = formData.hora_termino.split(':').map(Number);
-    const totalMin = hFin * 60 + mFin - (hIni * 60 + mIni);
-    return totalMin > 0 ? Number((totalMin / 60).toFixed(2)) : 0;
-  }, [formData.hora_inicio, formData.hora_termino]);
+    const totalMin = (hFin * 60 + mFin) - (hIni * 60 + mIni);
+    return totalMin > 0 ? Number((totalMin / 60).toFixed(1)) : 0;
+  };
 
-  async function handleSubmit(e) {
+  const duracionHoras = calcularDuracion();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrorValidacion(null);
+    setErrorMsg(null);
 
-    if (duracionHoras <= 0) {
-      setErrorValidacion('La hora de término debe ser estrictamente posterior a la hora de inicio.');
+    if (!formData.nombre_evento.trim()) {
+      setErrorMsg('Debes ingresar un nombre para el evento o turno.');
+      return;
+    }
+
+    if (!formData.fecha) {
+      setErrorMsg('Debes seleccionar una fecha para el turno.');
+      return;
+    }
+
+    if (!formData.hora_inicio || !formData.hora_termino) {
+      setErrorMsg('Debes ingresar la hora de inicio y de término.');
+      return;
+    }
+
+    if (formData.hora_inicio >= formData.hora_termino) {
+      setErrorMsg('La hora de inicio debe ser anterior a la hora de término.');
+      return;
+    }
+
+    if (!formData.cupos || Number(formData.cupos) <= 0) {
+      setErrorMsg('La cantidad de vacantes requeridas debe ser mayor a 0.');
       return;
     }
 
     try {
       setGuardando(true);
 
-      const fechaInicioISO = `${formData.fecha}T${formData.hora_inicio}:00`;
-      const fechaTerminoISO = `${formData.fecha}T${formData.hora_termino}:00`;
+      // Fijación de hora real UTC fija (.000Z) para almacenar los caracteres exactos
+      const fechaInicioISO = `${formData.fecha}T${formData.hora_inicio}:00.000Z`;
+      const fechaTerminoISO = `${formData.fecha}T${formData.hora_termino}:00.000Z`;
 
-      const response = await createTurno({
-        nombre_evento: formData.nombre_evento,
+      const payload = {
+        nombre_evento: formData.nombre_evento.trim(),
+        fecha: formData.fecha,
+        hora_inicio: formData.hora_inicio,
+        hora_termino: formData.hora_termino,
         fecha_inicio: fechaInicioISO,
         fecha_termino: fechaTerminoISO,
-        cupos: formData.cupos,
-      });
+        cupos: Number(formData.cupos) || 5,
+        estado: 'Abierto'
+      };
 
-      const turnoCreado = response?.data || response;
+      const fnCrear = typeof crearTurno === 'function' ? crearTurno : createTurno;
+      const res = await fnCrear(payload);
+      const turnoCreado = res?.data || res;
 
-      if (response?.error) {
-        throw new Error(response.error);
-      }
-
-      if (onTurnoCreado && turnoCreado) {
+      if (onTurnoCreado) {
         onTurnoCreado(turnoCreado);
+      } else {
+        handleCerrar();
       }
     } catch (err) {
-      console.error('Error al persistir el turno:', err);
-      setErrorValidacion(err.message || 'Ocurrió un error al intentar crear el turno en Supabase.');
+      console.error('Error al crear turno:', err);
+      setErrorMsg(err.message || 'Error al conectar con la base de datos para crear el turno.');
     } finally {
       setGuardando(false);
     }
-  }
+  };
 
   return (
-    <div className="w-full py-4">
-      <div className="max-w-2xl mx-auto">
-        <button
-          type="button"
-          onClick={onVolver}
-          className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-[#06113C] font-semibold mb-6 transition cursor-pointer"
-        >
-          <ArrowLeft size={16} />
-          <span>Volver al listado</span>
-        </button>
-
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm">
-          <div className="pb-6 border-b border-slate-100">
-            <h1 className="text-xl font-bold text-[#06113C]">Crear Nuevo Turno Institucional</h1>
-            <p className="text-xs text-slate-500 mt-1">
-              Ingresa los detalles del bloque operativo. Al guardar, pasarás directamente a la selección de alumnos interesados.
+    <div 
+      className="konor-modal-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleCerrar();
+      }}
+    >
+      <div className="konor-crear-card">
+        <div className="konor-crear-header">
+          <div className="konor-crear-title-group">
+            <h2 className="konor-crear-title">Crear Nuevo Turno / Evento</h2>
+            <p className="konor-crear-subtitle">
+              Configura el bloque operativo y las vacantes requeridas para los ayudantes.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={handleCerrar}
+            className="konor-crear-close-btn"
+            title="Cerrar modal"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
-          {errorValidacion && (
-            <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-xs mt-4">
-              {errorValidacion}
-            </div>
-          )}
+        {errorMsg && (
+          <div className="konor-crear-alert">
+            <AlertCircle size={18} className="shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 uppercase mb-2">
-                Nombre del Evento / Turno
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="Ej: Registro Feria Vocacional"
-                value={formData.nombre_evento}
-                onChange={(e) => setFormData({ ...formData, nombre_evento: e.target.value })}
-                className="w-full text-sm border border-slate-200 rounded-lg p-3 outline-none focus:border-[#43b0c4] focus:ring-1 focus:ring-[#43b0c4]"
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="konor-crear-form">
+          <div className="konor-form-group">
+            <label className="konor-form-label">
+              <FileText size={15} />
+              <span>Nombre del Evento o Actividad</span>
+            </label>
+            <input
+              type="text"
+              required
+              maxLength={60}
+              placeholder="Ej. Apoyo Feria Vocacional"
+              value={formData.nombre_evento}
+              onChange={(e) => handleChange('nombre_evento', e.target.value)}
+              disabled={guardando}
+              className="konor-form-input"
+            />
+          </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 uppercase mb-2">
-                Fecha del Evento
+          <div className="konor-form-row">
+            <div className="konor-form-group flex-1">
+              <label className="konor-form-label">
+                <Calendar size={15} />
+                <span>Fecha del Turno</span>
               </label>
               <input
                 type="date"
                 required
                 value={formData.fecha}
-                onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
-                className="w-full text-sm border border-slate-200 rounded-lg p-3 outline-none focus:border-[#43b0c4]"
+                onChange={(e) => handleChange('fecha', e.target.value)}
+                disabled={guardando}
+                className="konor-form-input"
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase mb-2">
-                  Hora Inicio
-                </label>
-                <input
-                  type="time"
-                  required
-                  value={formData.hora_inicio}
-                  onChange={(e) => setFormData({ ...formData, hora_inicio: e.target.value })}
-                  className="w-full text-sm border border-slate-200 rounded-lg p-3 outline-none focus:border-[#43b0c4]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase mb-2">
-                  Hora Término
-                </label>
-                <input
-                  type="time"
-                  required
-                  value={formData.hora_termino}
-                  onChange={(e) => setFormData({ ...formData, hora_termino: e.target.value })}
-                  className="w-full text-sm border border-slate-200 rounded-lg p-3 outline-none focus:border-[#43b0c4]"
-                />
-              </div>
-            </div>
-
-            <div className={`p-4 rounded-xl border flex items-center justify-between text-xs ${
-              duracionHoras > 0 ? 'bg-slate-50 border-slate-200' : 'bg-red-50 border-red-200 text-red-700'
-            }`}>
-              <div className="flex items-center gap-2">
-                <Clock size={16} className="text-slate-400" />
-                <span className="font-medium">Duración calculada del turno:</span>
-              </div>
-              <span className="font-bold text-sm text-[#06113C]">
-                {duracionHoras > 0 ? `${duracionHoras} hrs` : 'Horario inválido'}
-              </span>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 uppercase mb-2">
-                Cupos Requeridos (Titulares)
+            <div className="konor-form-group flex-1">
+              <label className="konor-form-label">
+                <Users size={15} />
+                <span>Vacantes / Cupos</span>
               </label>
               <input
                 type="number"
-                min="1"
-                max="30"
                 required
+                min="1"
+                max="50"
                 value={formData.cupos}
-                onChange={(e) => setFormData({ ...formData, cupos: e.target.value })}
-                className="w-full text-sm border border-slate-200 rounded-lg p-3 outline-none focus:border-[#43b0c4]"
+                onChange={(e) => handleChange('cupos', e.target.value)}
+                disabled={guardando}
+                className="konor-form-input"
+              />
+            </div>
+          </div>
+
+          <div className="konor-form-row">
+            <div className="konor-form-group flex-1">
+              <label className="konor-form-label">
+                <Clock size={15} />
+                <span>Hora Inicio (24h)</span>
+              </label>
+              <input
+                type="time"
+                required
+                value={formData.hora_inicio}
+                onChange={(e) => handleChange('hora_inicio', e.target.value)}
+                disabled={guardando}
+                className="konor-form-input"
               />
             </div>
 
-            <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={onVolver}
-                className="px-5 py-2.5 text-sm text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={guardando || duracionHoras <= 0}
-                className="px-6 py-2.5 text-sm bg-[#06113C] hover:bg-[#0a1a5c] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg shadow-sm transition flex items-center gap-2 cursor-pointer"
-              >
-                {guardando && <Loader2 className="animate-spin text-[#43b0c4]" size={16} />}
-                <span>Crear y Continuar al Detalle</span>
-              </button>
+            <div className="konor-form-group flex-1">
+              <label className="konor-form-label">
+                <Clock size={15} />
+                <span>Hora Término (24h)</span>
+              </label>
+              <input
+                type="time"
+                required
+                value={formData.hora_termino}
+                onChange={(e) => handleChange('hora_termino', e.target.value)}
+                disabled={guardando}
+                className="konor-form-input"
+              />
             </div>
-          </form>
-        </div>
+          </div>
+
+          <div className="konor-duracion-box">
+            <span className="konor-duracion-label">Duración total calculada:</span>
+            <span className={`konor-duracion-valor ${duracionHoras <= 0 ? 'error' : ''}`}>
+              {duracionHoras > 0 ? `${duracionHoras} hrs` : '--'}
+            </span>
+          </div>
+
+          <div className="konor-crear-footer">
+            <button
+              type="button"
+              onClick={handleCerrar}
+              disabled={guardando}
+              className="konor-btn-cancelar"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={guardando || duracionHoras <= 0}
+              className="konor-btn-crear"
+            >
+              {guardando ? (
+                <>
+                  <Loader2 size={16} className="konor-spin-icon" />
+                  <span>Creando...</span>
+                </>
+              ) : (
+                <>
+                  <Plus size={16} />
+                  <span>Crear y Planificar Turno</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

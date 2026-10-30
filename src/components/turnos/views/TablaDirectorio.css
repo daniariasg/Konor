@@ -1,0 +1,175 @@
+/* Card Contenedora del Directorio (HU05) */
+.konor-directorio-card {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  box-shadow: 0 4px 6px -1px rgba(6, 17, 60, 0.04);
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+/* Barra de Filtros y Búsqueda */
+.konor-directorio-toolbar {
+  padding: 20px 24px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.konor-directorio-search-wrapper {
+  position: relative;
+  min-width: 280px;
+  flex: 1;
+  max-width: 420px;
+}
+
+.konor-directorio-search-input {
+  width: 100%;
+  padding: 9px 12px 9px 38px;
+  font-size: 0.875rem;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.konor-directorio-search-input:focus {
+  border-color: #43b0c4;
+  box-shadow: 0 0 0 2px rgba(67, 176, 196, 0.2);
+}
+
+.konor-directorio-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+/* Acciones y Selector de Mes */
+.konor-directorio-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.konor-select-mes {
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: #06113c;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+.konor-select-mes:focus {
+  border-color: #43b0c4;
+}
+
+/* Contenedor Responsive (Scroll Horizontal Seguro) */
+.konor-directorio-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.konor-directorio-table {
+  width: 100%;
+  min-width: 800px; /* Evita que columnas como RUT y Correo se aplasten */
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.konor-directorio-table th {
+  background-color: #f8fafc;
+  padding: 14px 18px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #475569;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.konor-directorio-table td {
+  padding: 14px 18px;
+  font-size: 0.875rem;
+  color: #1e293b;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.konor-directorio-table tr:hover {
+  background-color: #f8fafc;
+  cursor: pointer;
+}
+
+/* Columnas Específicas */
+.td-directorio-nombre {
+  font-weight: 700;
+  color: #06113c;
+}
+
+.td-directorio-rut {
+  font-family: monospace;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.td-directorio-correo {
+  color: #475569;
+  font-size: 0.825rem;
+}
+
+.td-directorio-horas {
+  font-weight: 800;
+  color: #06113c;
+}
+
+/* Paginador Inferior */
+.konor-directorio-pagination {
+  padding: 16px 24px;
+  background-color: #ffffff;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.konor-pagination-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.konor-btn-page {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.konor-btn-page:hover:not(:disabled) {
+  background-color: #f1f5f9;
+  color: #06113c;
+}
+
+.konor-btn-page:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

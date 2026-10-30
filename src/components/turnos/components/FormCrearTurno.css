@@ -1,0 +1,231 @@
+/* Overlay centrado que no tapa toda la pantalla de forma estática */
+.konor-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(6, 17, 60, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* Tarjeta contenida a 520px max */
+.konor-crear-card {
+  width: 100%;
+  max-width: 520px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #cbd5e1;
+  padding: 28px;
+  box-shadow: 0 20px 25px -5px rgba(6, 17, 60, 0.15), 0 8px 10px -6px rgba(6, 17, 60, 0.1);
+  box-sizing: border-box;
+}
+
+/* Cabecera */
+.konor-crear-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.konor-crear-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.konor-crear-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #06113c;
+  letter-spacing: -0.01em;
+}
+
+.konor-crear-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.konor-crear-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.konor-crear-close-btn:hover {
+  background-color: #f1f5f9;
+  color: #06113c;
+}
+
+/* Alert de error */
+.konor-crear-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  margin-bottom: 20px;
+}
+
+/* Formulario */
+.konor-crear-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.konor-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.konor-form-row {
+  display: flex;
+  gap: 14px;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.konor-form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #475569;
+}
+
+.konor-form-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #1e293b;
+  outline: none;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  transition: all 0.15s ease;
+}
+
+.konor-form-input:focus {
+  border-color: #43b0c4;
+  box-shadow: 0 0 0 2px rgba(67, 176, 196, 0.2);
+}
+
+.konor-form-input:disabled {
+  background-color: #f1f5f9;
+  cursor: not-allowed;
+}
+
+/* Caja de duración calculada */
+.konor-duracion-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 4px;
+}
+
+.konor-duracion-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.konor-duracion-valor {
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: #06113c;
+}
+
+.konor-duracion-valor.error {
+  color: #dc2626;
+}
+
+/* Footer y Botones */
+.konor-crear-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.konor-btn-cancelar {
+  padding: 9px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.konor-btn-cancelar:hover:not(:disabled) {
+  background-color: #f1f5f9;
+  color: #06113c;
+}
+
+.konor-btn-crear {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffffff;
+  background-color: #06113c;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.konor-btn-crear:hover:not(:disabled) {
+  background-color: #0a1a5c;
+}
+
+.konor-btn-crear:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.konor-spin-icon {
+  animation: konor-spin 0.8s linear infinite;
+  color: #43b0c4;
+}
+
+@keyframes konor-spin {
+  to { transform: rotate(360deg); }
+}

@@ -1,4 +1,5 @@
 import { supabase } from '../config/supabase.js';
+import { sanitizeString } from '../utils/securityUtils.js';
 
 /**
  * Obtiene la lista completa de alumnos activos con sus horas acumuladas del mes.
@@ -45,11 +46,11 @@ export async function fetchAlumnos() {
 export const getAlumnos = fetchAlumnos;
 
 /**
- * HU08 / HU10: Obtiene asignaciones del turno vinculadas a alumnos.
+ * HU08 / HU10: Obtiene asignaciones de un turno vinculadas a alumnos.
  */
 export async function fetchAsignacionesPorTurno(idTurno) {
   try {
-    if (!idTurno) return [];
+    if (!idTurno || isNaN(Number(idTurno))) return [];
 
     const { data: asignaciones, error } = await supabase
       .from('asignacion_turno')
@@ -62,6 +63,7 @@ export async function fetchAsignacionesPorTurno(idTurno) {
         hora_entrada_real,
         hora_salida_real,
         motivo_cancelacion,
+        fecha_cierre,
         alumno:id_alumno (
           id_alumno,
           nombre,
@@ -71,7 +73,7 @@ export async function fetchAsignacionesPorTurno(idTurno) {
           activo
         )
       `)
-      .eq('id_turno', idTurno);
+      .eq('id_turno', Number(idTurno));
 
     if (error) throw error;
     return asignaciones || [];
@@ -125,11 +127,14 @@ export async function fetchTurnos() {
 export const getTurnos = fetchTurnos;
 
 /**
- * HU06: Obtiene el detalle de un turno por su ID.
+ * HU06 / HU08: Obtiene el detalle completo de un turno por su ID.
+ * Esta función es la que estaba faltando y causaba el Uncaught SyntaxError.
  */
 export async function getTurnoById(idTurno) {
   try {
-    if (!idTurno) return { data: null, error: 'ID requerido' };
+    if (!idTurno || isNaN(Number(idTurno))) {
+      return { data: null, error: 'ID de turno inválido o ausente' };
+    }
 
     const { data: turno, error } = await supabase
       .from('turno')
@@ -149,6 +154,7 @@ export async function getTurnoById(idTurno) {
           hora_entrada_real,
           hora_salida_real,
           motivo_cancelacion,
+          fecha_cierre,
           alumno:id_alumno (
             id_alumno,
             nombre,
@@ -159,7 +165,7 @@ export async function getTurnoById(idTurno) {
           )
         )
       `)
-      .eq('id_turno', idTurno)
+      .eq('id_turno', Number(idTurno))
       .single();
 
     if (error) throw error;
@@ -171,7 +177,7 @@ export async function getTurnoById(idTurno) {
 }
 
 /**
- * HU10 / HU11: Guarda y confirma las asignaciones.
+ * HU10 / HU11: Guarda y confirma las asignaciones procesando los estados.
  */
 export async function guardarAsignaciones(idTurno, interesados = [], duracionTurno = 0) {
   try {
@@ -185,16 +191,19 @@ export async function guardarAsignaciones(idTurno, interesados = [], duracionTur
         estado = 'Asignado';
       }
 
+      const motivoLimpio = item.motivo_cancelacion 
+        ? (typeof sanitizeString === 'function' ? sanitizeString(item.motivo_cancelacion) : item.motivo_cancelacion).slice(0, 255)
+        : null;
+
       return {
-        id_turno: idTurno,
-        id_alumno: item.id_alumno,
+        id_turno: Number(idTurno),
+        id_alumno: Number(item.id_alumno),
         estado_asignacion: estado,
-        motivo_cancelacion: item.motivo_cancelacion || null
+        motivo_cancelacion: motivoLimpio
       };
     });
 
     if (registros.length > 0) {
-      // Upsert contra la restricción uq_turno_alumno
       const { error: upsertError } = await supabase
         .from('asignacion_turno')
         .upsert(registros, { onConflict: 'id_turno,id_alumno' });
@@ -202,13 +211,12 @@ export async function guardarAsignaciones(idTurno, interesados = [], duracionTur
       if (upsertError) throw upsertError;
     }
 
-    // Actualizar estado del turno a 'Asignado' si hay titulares
     const tieneAsignados = interesados.some((i) => i.asignado && !i.cancelo);
     if (tieneAsignados) {
       const { error: turnoError } = await supabase
         .from('turno')
         .update({ estado: 'Asignado' })
-        .eq('id_turno', idTurno);
+        .eq('id_turno', Number(idTurno));
 
       if (turnoError) throw turnoError;
     }
@@ -225,6 +233,7 @@ export const guardarAsignacionesTurno = guardarAsignaciones;
 /**
  * HU06: Inserta un nuevo turno adaptando formatos de formulario.
  */
+
 export async function createTurno(payload) {
   try {
     const { 
@@ -266,8 +275,10 @@ export async function createTurno(payload) {
       throw new Error('La hora de término debe ser posterior a la de inicio.');
     }
 
+    const nombreLimpio = typeof sanitizeString === 'function' ? sanitizeString(nombre_evento) : nombre_evento.trim();
+
     const record = {
-      nombre_evento: nombre_evento.trim(),
+      nombre_evento: nombreLimpio,
       fecha_inicio: inicio.toISOString(),
       fecha_termino: termino.toISOString(),
       cupos: vacantes,
@@ -338,7 +349,7 @@ export async function fetchAlumnosDisponibles(
 
       const tieneChoque = susAsignaciones.some((asig) => {
         if (asig.estado_asignacion !== 'Asignado') return false;
-        if (idTurnoActual && asig.turno.id_turno === idTurnoActual) return false;
+        if (idTurnoActual && asig.turno.id_turno === Number(idTurnoActual)) return false;
 
         const otroIni = new Date(asig.turno.fecha_inicio).getTime();
         const otroFin = new Date(asig.turno.fecha_termino).getTime();
@@ -374,7 +385,7 @@ export async function cancelarTurno(idTurno) {
     const { data, error } = await supabase
       .from('turno')
       .update({ estado: 'Cancelado' })
-      .eq('id_turno', idTurno)
+      .eq('id_turno', Number(idTurno))
       .select()
       .single();
 
@@ -394,7 +405,7 @@ export async function duplicarTurno(idTurno, nuevaFechaInicio, nuevaFechaTermino
     const { data: base, error: errorBase } = await supabase
       .from('turno')
       .select('nombre_evento, cupos')
-      .eq('id_turno', idTurno)
+      .eq('id_turno', Number(idTurno))
       .single();
 
     if (errorBase) throw errorBase;

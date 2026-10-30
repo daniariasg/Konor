@@ -1,88 +1,92 @@
-/* Vista General de Turnos */
+/* Contenedor Principal de la Vista */
 .konor-turnos-view {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
   width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
-/* Cabecera */
+/* Cabecera Principal */
 .konor-turnos-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
+  margin-bottom: 24px;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .konor-turnos-title {
-  font-size: 1.75rem;
+  margin: 0;
+  font-size: 1.6rem;
   font-weight: 800;
   color: #06113c;
-  margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .konor-turnos-subtitle {
-  font-size: 0.875rem;
-  color: #64748b;
   margin: 4px 0 0 0;
+  font-size: 0.85rem;
+  color: #64748b;
 }
 
-.konor-turnos-actions {
+.konor-turnos-header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
-/* Botones */
+/* Botones de Cabecera */
 .konor-btn-primary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   background-color: #43b0c4;
-  color: #06113c;
-  font-weight: 700;
+  color: #ffffff;
   font-size: 0.875rem;
+  font-weight: 700;
   padding: 10px 18px;
   border-radius: 8px;
   border: none;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: all 0.15s ease-in-out;
 }
 
 .konor-btn-primary:hover {
-  background-color: #389eb0;
+  background-color: #389aa9;
 }
 
-.konor-btn-refresh {
-  display: flex;
+.konor-btn-icon {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
+  width: 40px;
+  height: 40px;
+  background-color: #ffffff;
   border: 1px solid #cbd5e1;
-  color: #64748b;
-  padding: 10px;
   border-radius: 8px;
+  color: #475569;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.konor-btn-refresh:hover {
-  background-color: #f8fafc;
+.konor-btn-icon:hover {
+  background-color: #f1f5f9;
   color: #06113c;
 }
 
-/* Banners y Cargas */
-.konor-turnos-error-banner {
+/* Alertas y Feedback */
+.konor-turnos-alert {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   background-color: #fef2f2;
   border: 1px solid #fecaca;
   color: #b91c1c;
   padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 0.875rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
 }
 
 .konor-turnos-loading {
@@ -90,107 +94,142 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 64px 0;
-  gap: 16px;
+  padding: 60px 0;
+  gap: 12px;
   color: #64748b;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
-.konor-turnos-spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid rgba(67, 176, 196, 0.2);
-  border-top-color: #43b0c4;
-  border-radius: 50%;
-  animation: konor-spin 0.8s linear infinite;
-}
-
-/* Estado Vacío */
-.konor-turnos-empty-state {
+.konor-turnos-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 64px 20px;
   background-color: #ffffff;
-  border: 2px dashed #cbd5e1;
-  border-radius: 12px;
-  padding: 64px 24px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
   text-align: center;
-  gap: 12px;
+  gap: 8px;
 }
 
-.konor-empty-icon {
-  color: #94a3b8;
-}
-
-.konor-turnos-empty-state h3 {
-  margin: 0;
+.konor-turnos-empty h3 {
+  margin: 12px 0 0 0;
+  font-size: 1.1rem;
+  font-weight: 700;
   color: #06113c;
-  font-size: 1.125rem;
 }
 
-.konor-turnos-empty-state p {
+.konor-turnos-empty p {
   margin: 0;
+  font-size: 0.85rem;
   color: #64748b;
-  font-size: 0.875rem;
-  max-width: 400px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
-/* Grid de Tarjetas */
+/* Grilla de Turnos (Fija a 3 columnas en escritorio) */
 .konor-turnos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
 }
 
+@media (min-width: 1024px) {
+  .konor-turnos-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Tarjeta de Turno */
 .konor-turno-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 20px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 4px 6px -1px rgba(6, 17, 60, 0.04);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  justify-content: space-between;
+  outline: none;
+  min-width: 0; /* Previene desbordamiento en CSS grid */
 }
 
 .konor-turno-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 15px -3px rgba(6, 17, 60, 0.08);
   border-color: #43b0c4;
 }
 
 .konor-card-header {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
+  margin-bottom: 16px;
 }
 
 .konor-card-title-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+  flex: 1;
 }
 
+/* Truncado estricto contra desbordamientos */
 .konor-card-title {
   margin: 0;
   font-size: 1.05rem;
-  font-weight: 700;
+  font-weight: 800;
   color: #06113c;
   line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
-.konor-card-options {
+.konor-badge-status {
+  align-self: flex-start;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  text-transform: capitalize;
+}
+
+.konor-badge-status.abierto {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.konor-badge-status.asignado {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.konor-badge-status.cerrado {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.konor-badge-status.cancelado {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.konor-card-quick-actions {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
 }
 
-.konor-card-btn-action {
+.konor-btn-card-action {
   background: transparent;
   border: none;
   color: #94a3b8;
@@ -203,103 +242,85 @@
   transition: all 0.15s ease;
 }
 
-.konor-card-btn-action:hover {
+.konor-btn-card-action:hover {
   background-color: #f1f5f9;
   color: #06113c;
 }
 
-.konor-card-btn-action.delete:hover {
-  background-color: #fee2e2;
-  color: #dc2626;
-}
-
-/* Badges de Estado */
-.konor-estado-badge {
-  display: inline-block;
-  align-self: flex-start;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  text-transform: capitalize;
-}
-
-.estado-abierto {
-  background-color: #e0f2fe;
-  color: #0369a1;
-}
-
-.estado-asignado {
-  background-color: #dcfce7;
-  color: #15803d;
-}
-
-.estado-cerrado {
-  background-color: #f1f5f9;
-  color: #475569;
-}
-
-.estado-cancelado {
+.konor-btn-card-action.delete:hover {
   background-color: #fee2e2;
   color: #b91c1c;
 }
 
-/* Cuerpo de la Card */
 .konor-card-body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  margin-bottom: 20px;
 }
 
-.konor-info-row {
+.konor-meta-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 0.85rem;
-  color: #475569;
+  gap: 8px;
+  font-size: 0.825rem;
+  color: #64748b;
+  font-weight: 500;
 }
 
-.konor-info-icon {
-  color: #64748b;
+.konor-meta-icon {
+  color: #94a3b8;
   flex-shrink: 0;
 }
 
-.konor-cupos-badge {
-  font-size: 0.75rem;
+.konor-cupos-tag {
   font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
-.cupos-cero {
+.konor-cupos-tag.empty {
   background-color: #f1f5f9;
   color: #64748b;
 }
 
-.cupos-parcial {
-  background-color: #fef3c7;
-  color: #b45309;
+.konor-cupos-tag.mid {
+  background-color: #fef9c3;
+  color: #854d0e;
 }
 
-.cupos-llenos {
+.konor-cupos-tag.full {
   background-color: #dcfce7;
   color: #15803d;
 }
 
 .konor-card-footer {
-  margin-top: auto;
-  padding-top: 12px;
   border-top: 1px solid #f1f5f9;
+  padding-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .konor-card-link {
-  font-size: 0.85rem;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.825rem;
+  font-weight: 700;
   color: #43b0c4;
+  transition: color 0.15s ease;
 }
 
-@keyframes konor-spin {
-  to {
-    transform: rotate(360deg);
-  }
+.konor-turno-card:hover .konor-card-link {
+  color: #06113c;
+}
+
+.konor-spin {
+  animation: konor-rotate 0.8s linear infinite;
+}
+
+@keyframes konor-rotate {
+  to { transform: rotate(360deg); }
 }

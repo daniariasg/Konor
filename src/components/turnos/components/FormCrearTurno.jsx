@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { crearTurno, createTurno } from '../../../services/turnosService.js';
+import { supabase } from '../../../config/supabase.js';
 import { 
   Calendar, 
   Clock, 
@@ -7,19 +7,47 @@ import {
   FileText, 
   X, 
   Plus, 
+  Save,
   AlertCircle, 
   Loader2 
 } from 'lucide-react';
 import './FormCrearTurno.css';
 
-export default function FormCrearTurno({ onCerrar, onVolver, onTurnoCreado }) {
+    const obtenerFechaHoraLocal = (valor) => {
+    if (!valor) return { fecha: '', hora: '' };
+
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return { fecha: '', hora: '' };
+
+    const dosDigitos = (numero) => String(numero).padStart(2, '0');
+
+    return {
+      fecha: `${fecha.getFullYear()}-${dosDigitos(fecha.getMonth() + 1)}-${dosDigitos(fecha.getDate())}`,
+      hora: `${dosDigitos(fecha.getHours())}:${dosDigitos(fecha.getMinutes())}`
+    };
+  };
+
+export default function FormCrearTurno({ onCerrar, onVolver, onTurnoCreado, turnoParaEditar = null }) {
+  const esEdicion = Boolean(turnoParaEditar?.id_turno);
+
+  // Extraer valores iniciales si es edición
+  const inicioLocal = obtenerFechaHoraLocal(turnoParaEditar?.fecha_inicio);
+  const terminoLocal = obtenerFechaHoraLocal(turnoParaEditar?.fecha_termino);
+
+  const fechaInicial = inicioLocal.fecha || turnoParaEditar?.fecha || '';
+  const horaIniInicial = inicioLocal.hora || turnoParaEditar?.hora_inicio || '';
+  const horaFinInicial = terminoLocal.hora || turnoParaEditar?.hora_termino || '';
+
+
+
   const [formData, setFormData] = useState({
-    nombre_evento: '',
-    fecha: '',
-    hora_inicio: '',
-    hora_termino: '',
-    cupos: 5
+    nombre_evento: turnoParaEditar?.nombre_evento || '',
+    fecha: fechaInicial,
+    hora_inicio: horaIniInicial,
+    hora_termino: horaFinInicial,
+    cupos: esEdicion ? turnoParaEditar.cupos || '' : '' // Sin valor por defecto al crear
   });
+
   const [errorMsg, setErrorMsg] = useState(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -70,44 +98,70 @@ export default function FormCrearTurno({ onCerrar, onVolver, onTurnoCreado }) {
     }
 
     if (!formData.cupos || Number(formData.cupos) <= 0) {
-      setErrorMsg('La cantidad de vacantes requeridas debe ser mayor a 0.');
+      setErrorMsg('Debes ingresar una cantidad válida de vacantes (mínimo 1).');
       return;
     }
 
     try {
       setGuardando(true);
 
-      // Fijación de hora real UTC fija (.000Z) para almacenar los caracteres exactos
-      const fechaInicioISO = `${formData.fecha}T${formData.hora_inicio}:00.000Z`;
-      const fechaTerminoISO = `${formData.fecha}T${formData.hora_termino}:00.000Z`;
+      const fechaInicioISO = `${formData.fecha}T${formData.hora_inicio}:00`;
+      const fechaTerminoISO = `${formData.fecha}T${formData.hora_termino}:00`;
 
-      const payload = {
-        nombre_evento: formData.nombre_evento.trim(),
-        fecha: formData.fecha,
-        hora_inicio: formData.hora_inicio,
-        hora_termino: formData.hora_termino,
-        fecha_inicio: fechaInicioISO,
-        fecha_termino: fechaTerminoISO,
-        cupos: Number(formData.cupos) || 5,
-        estado: 'Abierto'
-      };
+      if (esEdicion) {
+        // Actualizar turno existente sin borrar las asignaciones asociadas
+        const { data: turnoActualizado, error: errUpdate } = await supabase
+          .from('turno')
+          .update({
+            nombre_evento: formData.nombre_evento.trim(),
+            fecha_inicio: fechaInicioISO,
+            fecha_termino: fechaTerminoISO,
+            cupos: Number(formData.cupos)
+          })
+          .eq('id_turno', turnoParaEditar.id_turno)
+          .select()
+          .single();
 
-      const fnCrear = typeof crearTurno === 'function' ? crearTurno : createTurno;
-      const res = await fnCrear(payload);
-      const turnoCreado = res?.data || res;
+        if (errUpdate) throw errUpdate;
 
-      if (onTurnoCreado) {
-        onTurnoCreado(turnoCreado);
+        if (onTurnoCreado) {
+          onTurnoCreado(turnoActualizado);
+        } else {
+          handleCerrar();
+        }
       } else {
-        handleCerrar();
+        // Crear nuevo turno
+        const payload = {
+          nombre_evento: formData.nombre_evento.trim(),
+          fecha_inicio: fechaInicioISO,
+          fecha_termino: fechaTerminoISO,
+          cupos: Number(formData.cupos),
+          estado: 'Abierto'
+        };
+
+        const { data: turnoCreado, error } = await supabase
+          .from('turno')
+          .insert(payload)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        if (onTurnoCreado) {
+          onTurnoCreado(turnoCreado);
+        } else {
+          handleCerrar();
+        }
       }
     } catch (err) {
-      console.error('Error al crear turno:', err);
-      setErrorMsg(err.message || 'Error al conectar con la base de datos para crear el turno.');
+      console.error('Error al procesar turno:', err);
+      setErrorMsg(err.message || 'Error al conectar con la base de datos.');
     } finally {
       setGuardando(false);
     }
   };
+
+
 
   return (
     <div 
@@ -119,9 +173,13 @@ export default function FormCrearTurno({ onCerrar, onVolver, onTurnoCreado }) {
       <div className="konor-crear-card">
         <div className="konor-crear-header">
           <div className="konor-crear-title-group">
-            <h2 className="konor-crear-title">Crear Nuevo Turno / Evento</h2>
+            <h2 className="konor-crear-title">
+              {esEdicion ? 'Editar Turno / Evento' : 'Crear Nuevo Turno / Evento'}
+            </h2>
             <p className="konor-crear-subtitle">
-              Configura el bloque operativo y las vacantes requeridas para los ayudantes.
+              {esEdicion 
+                ? 'Actualiza los parámetros operativos del bloque sin afectar los alumnos inscritos.'
+                : 'Configura el bloque operativo y las vacantes requeridas para los ayudantes.'}
             </p>
           </div>
           <button
@@ -185,6 +243,7 @@ export default function FormCrearTurno({ onCerrar, onVolver, onTurnoCreado }) {
                 required
                 min="1"
                 max="50"
+                placeholder="Ej. 5"
                 value={formData.cupos}
                 onChange={(e) => handleChange('cupos', e.target.value)}
                 disabled={guardando}
@@ -249,7 +308,12 @@ export default function FormCrearTurno({ onCerrar, onVolver, onTurnoCreado }) {
               {guardando ? (
                 <>
                   <Loader2 size={16} className="konor-spin-icon" />
-                  <span>Creando...</span>
+                  <span>{esEdicion ? 'Guardando cambios...' : 'Creando...'}</span>
+                </>
+              ) : esEdicion ? (
+                <>
+                  <Save size={16} />
+                  <span>Guardar Cambios</span>
                 </>
               ) : (
                 <>

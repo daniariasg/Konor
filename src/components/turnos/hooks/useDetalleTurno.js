@@ -1,285 +1,657 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../../../config/supabase.js';
-import {
-  fetchAlumnos,
-  fetchAsignacionesPorTurno,
-  guardarAsignaciones,
-  getTurnoById
-} from '../../../services/turnosService.js';
 
-// Extrae estrictamente "HH:mm" sin pasar por objetos Date ni conversiones de timezone
-export function extraerHoraPura(valor) {
-  if (!valor) return '--:--';
-  const str = String(valor);
-  const match = str.match(/T(\d{2}:\d{2})/);
-  if (match) return match[1];
-  if (/^\d{2}:\d{2}/.test(str)) return str.slice(0, 5);
-  return '--:--';
-}
+const extraerHora = (val) => {
+  if (!val) return '--:--';
+  const m = String(val).match(/T(\d{2}:\d{2})/);
+  return m ? m[1] : (/^\d{2}:\d{2}/.test(String(val)) ? String(val).slice(0, 5) : '--:--');
+};
 
-// Extrae estrictamente "DD/MM/YYYY" sin saltos de fecha por UTC
-export function extraerFechaPura(valor) {
-  if (!valor) return '--/--/----';
-  const str = String(valor);
-  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (match) {
-    const [, y, m, d] = match;
-    return `${d}/${m}/${y}`;
-  }
-  return '--/--/----';
-}
+const extraerFecha = (val) => {
+  if (!val) return '--/--/----';
+  const m = String(val).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '--/--/----';
+};
 
-export function useDetalleTurno(turnoInicial) {
-  const [turno, setTurno] = useState(turnoInicial || {});
-  const [vistaAsistencia, setVistaAsistencia] = useState(turnoInicial?.estado === 'Cerrado');
-  const [alumnosCatalogo, setAlumnosCatalogo] = useState([]);
-  const [interesados, setInteresados] = useState([]);
-  const [asistenciaRows, setAsistenciaRows] = useState([]);
-  const [modoEdicion, setModoEdicion] = useState(turnoInicial?.estado === 'Abierto');
-  const [loading, setLoading] = useState(true);
+const calcularDuracion = (ini, fin) => {
+  if (!ini || !fin || ini === '--:--' || fin === '--:--') return 0;
+  const [h1, m1] = ini.split(':').map(Number);
+  const [h2, m2] = fin.split(':').map(Number);
+  const min = (h2 * 60 + m2) - (h1 * 60 + m1);
+  return min > 0 ? Number((min / 60).toFixed(1)) : 0;
+};
+
+const horaAMinutos = (hora) => {
+  const [horas, minutos] = String(hora || '').split(':').map(Number);
+  return horas * 60 + minutos;
+};
+
+const calcularHorasReales = (entrada, salida) => {
+  let minutos = horaAMinutos(salida) - horaAMinutos(entrada);
+  if (minutos < 0) minutos += 24 * 60;
+  return minutos > 0 ? Number((minutos / 60).toFixed(2)) : 0;
+};
+
+const obtenerFechaLocal = () => {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Santiago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date());
+
+  const parte = (tipo) => partes.find((p) => p.type === tipo)?.value;
+  return `${parte('year')}-${parte('month')}-${parte('day')}`;
+};
+
+export function useDetalleTurno(input) {
+  const turno = input?.id_turno ? input : (input?.turno || {});
+  const idTurno = turno?.id_turno;
+
+  const [loading, setLoading] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [catalogoAlumnos, setCatalogoAlumnos] = useState([]);
+  const [interesados, setInteresados] = useState([]);
+  const [terminoBusqueda, setTerminoBusqueda] = useState('');
+  const [modoEdicion, setModoEdicion] = useState(true);
+  const [turnoYaGuardado, setTurnoYaGuardado] = useState(false);
   const [alumnoParaBaja, setAlumnoParaBaja] = useState(null);
+  const [listaAbierta, setListaAbierta] = useState(false);
+  const [estadoTurno, setEstadoTurno] = useState(turno?.estado || '');
 
-  const idTurnoActual = turno.id_turno || turnoInicial?.id_turno;
+  const storageKey = idTurno ? `konor_borrador_turno_${idTurno}` : null;
 
-  // Extracción de texto fija
-  const horaInicioBase = useMemo(() => {
-    return extraerHoraPura(turno.hora_inicio || turno.fecha_inicio);
-  }, [turno.hora_inicio, turno.fecha_inicio]);
+  const cuposTotales = Number(turno?.cupos) > 0 ? Number(turno.cupos) : 1;
+  const fechaStr = extraerFecha(turno?.fecha_inicio || turno?.fecha);
+  const horaInicioBase = extraerHora(turno?.fecha_inicio || turno?.hora_inicio);
+  const horaTerminoBase = extraerHora(turno?.fecha_termino || turno?.hora_termino);
+  const duracionTurno = calcularDuracion(horaInicioBase, horaTerminoBase);
 
-  const horaTerminoBase = useMemo(() => {
-    return extraerHoraPura(turno.hora_termino || turno.fecha_termino);
-  }, [turno.hora_termino, turno.fecha_termino]);
+  // Helper para guardar en borrador local cada vez que cambien los interesados
+  const actualizarInteresadosConBorrador = (actualizador) => {
+    setInteresados((prev) => {
+      const nuevaLista = typeof actualizador === 'function' ? actualizador(prev) : actualizador;
+      if (storageKey && modoEdicion && estadoTurno !== 'Cerrado') {
+        try {
+          sessionStorage.setItem(storageKey, JSON.stringify(nuevaLista));
+        } catch (e) {
+          console.warn('No se pudo guardar el borrador en sessionStorage', e);
+        }
+      }
+      return nuevaLista;
+    });
+  };
 
-  const fechaStr = useMemo(() => {
-    return extraerFechaPura(turno.fecha || turno.fecha_inicio);
-  }, [turno.fecha, turno.fecha_inicio]);
+  const cargarDatos = useCallback(async () => {
+    if (!idTurno) return;
+    try {
+      setLoading(true);
 
-  // Diferencia directa de minutos
-  const duracionTurno = useMemo(() => {
-    if (horaInicioBase === '--:--' || horaTerminoBase === '--:--') return 0;
-    const [hI, mI] = horaInicioBase.split(':').map(Number);
-    const [hF, mF] = horaTerminoBase.split(':').map(Number);
-    const min = (hF * 60 + mF) - (hI * 60 + mI);
-    return min > 0 ? Number((min / 60).toFixed(1)) : 0;
-  }, [horaInicioBase, horaTerminoBase]);
+      const { data: alumnosBD } = await supabase
+        .from('alumno')
+        .select('id_alumno, nombre, rut, correo, jornada, activo')
+        .order('nombre', { ascending: true });
 
-  const armarListaAsistencia = useCallback((candidatos, turnoActual = turno) => {
-    const asignados = candidatos.filter((c) => c.asignado && !c.cancelo);
-    setAsistenciaRows(
-      asignados.map((a) => ({
-        id_alumno: a.id_alumno,
-        nombre: a.nombre,
-        rut: a.rut,
-        asistio: a.horas_validadas > 0 || turnoActual.estado !== 'Cerrado',
-        hora_entrada: a.hora_entrada_real ? extraerHoraPura(a.hora_entrada_real) : horaInicioBase,
-        hora_salida: a.hora_salida_real ? extraerHoraPura(a.hora_salida_real) : horaTerminoBase,
-        horas_calculadas: a.horas_validadas > 0 ? Number(a.horas_validadas) : duracionTurno,
-      }))
-    );
-  }, [turno, horaInicioBase, horaTerminoBase, duracionTurno]);
+      const ahora = new Date();
+      const primerDia = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString();
+      const ultimoDia = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+
+      const { data: asigMes } = await supabase
+        .from('asignacion_turno')
+        .select('id_alumno, horas_validadas, turno!inner(fecha_inicio)')
+        .in('estado_asignacion', ['Asistió', 'Ausente'])
+        .gte('turno.fecha_inicio', primerDia)
+        .lte('turno.fecha_inicio', ultimoDia);
+
+      const horasMap = (asigMes || []).reduce((acc, curr) => {
+        acc[curr.id_alumno] = (acc[curr.id_alumno] || 0) + (parseFloat(curr.horas_validadas) || 0);
+        return acc;
+      }, {});
+
+      const catalogo = (alumnosBD || []).map((al) => ({
+        ...al,
+        horas_acumuladas: horasMap[al.id_alumno] || 0
+      }));
+      setCatalogoAlumnos(catalogo);
+
+      // 1. Verificar si existe borrador temporal no guardado en la sesión
+      const borradorGuardado = storageKey ? sessionStorage.getItem(storageKey) : null;
+
+      const { data: asignacionesBD } = await supabase
+        .from('asignacion_turno')
+        .select(`
+          id_asignacion, id_turno, id_alumno, estado_asignacion,
+          motivo_cancelacion, horas_validadas,
+          hora_entrada_real, hora_salida_real, fecha_cierre
+        `)
+        .eq('id_turno', idTurno);
+
+      const existeEnBD = asignacionesBD && asignacionesBD.length > 0;
+
+      if (borradorGuardado) {
+        // Prioridad al borrador de trabajo del usuario
+        try {
+          const parsed = JSON.parse(borradorGuardado);
+          setInteresados(parsed);
+          setTurnoYaGuardado(existeEnBD);
+          setModoEdicion(true); // Permite continuar la edición del borrador
+          return;
+        } catch (e) {
+          console.error('Error parseando borrador local:', e);
+        }
+      }
+
+      // 2. Si no hay borrador, cargar directamente de la base de datos
+      if (existeEnBD) {
+        const mapeados = asignacionesBD.map((asig) => {
+          const alumnoReal = catalogo.find((c) => String(c.id_alumno) === String(asig.id_alumno));
+          const cancelo = asig.estado_asignacion === 'Canceló turno';
+          const asignadoOriginal = ['Asignado', 'Asistió', 'Ausente'].includes(
+            asig.estado_asignacion
+          );
+          const asistenciaActiva = asig.estado_asignacion !== 'Ausente' && !cancelo;
+
+          return {
+            id_alumno: asig.id_alumno,
+            id_asignacion: asig.id_asignacion,
+            nombre: alumnoReal?.nombre || 'Sin nombre',
+            rut: alumnoReal?.rut || '',
+            horas_acumuladas: alumnoReal?.horas_acumuladas || 0,
+            asignado: asignadoOriginal,
+            asignadoOriginal,
+            asistenciaActiva,
+            hora_entrada_real: asig.hora_entrada_real ? String(asig.hora_entrada_real).slice(0, 5) : horaInicioBase,
+            hora_salida_real: asig.hora_salida_real ? String(asig.hora_salida_real).slice(0, 5) : horaTerminoBase,
+            horas_validadas: Number(asig.horas_validadas) || 0,
+            hora_entrada_borrador: null,
+            hora_salida_borrador: null,
+            cancelo,
+            motivo_cancelacion: asig.motivo_cancelacion || '',
+            estado_asignacion: asig.estado_asignacion || 'En espera'
+          };
+        });
+
+        mapeados.sort((a, b) => {
+          if (a.cancelo && !b.cancelo) return 1;
+          if (!a.cancelo && b.cancelo) return -1;
+          return (a.horas_acumuladas || 0) - (b.horas_acumuladas || 0);
+        });
+
+        setInteresados(mapeados);
+        setTurnoYaGuardado(true);
+        setModoEdicion(false);
+      } else {
+        setInteresados([]);
+        setTurnoYaGuardado(false);
+        setModoEdicion(true);
+      }
+    } catch (err) {
+      console.error('Error cargando turno:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [idTurno, horaInicioBase, horaTerminoBase, storageKey]);
 
   useEffect(() => {
-    if (!idTurnoActual) {
-      setLoading(false);
-      return;
-    }
+    cargarDatos();
+  }, [cargarDatos]);
 
-    async function cargar() {
-      try {
-        setLoading(true);
-        let turnoVigente = turno;
-        if (!turno.fecha_inicio && !turno.fecha) {
-          const { data: turnoBD } = await getTurnoById(idTurnoActual);
-          if (turnoBD) {
-            turnoVigente = turnoBD;
-            setTurno(turnoBD);
-            if (turnoBD.estado === 'Cerrado') setVistaAsistencia(true);
-          }
-        }
+  useEffect(() => {
+    setEstadoTurno(turno?.estado || '');
+  }, [idTurno, turno?.estado]);
 
-        const [alumnosData, asignacionesData] = await Promise.all([
-          fetchAlumnos(),
-          fetchAsignacionesPorTurno(idTurnoActual),
-        ]);
+  const totalAsignados = useMemo(
+    () => interesados.filter((i) => i.asignado && !i.cancelo).length,
+    [interesados]
+  );
 
-        const catalogo = Array.isArray(alumnosData) ? alumnosData : alumnosData?.data || [];
-        const asignaciones = Array.isArray(asignacionesData) ? asignacionesData : asignacionesData?.data || [];
-        setAlumnosCatalogo(catalogo);
+  const resultadosBusqueda = useMemo(() => {
+    const q = terminoBusqueda.trim().toLowerCase();
+    if (q.length < 1) return [];
 
-        if (asignaciones.length > 0) {
-          const precargados = asignaciones.map((asig) => {
-            const perfil = catalogo.find((a) => a.id_alumno === asig.id_alumno) || {};
-            return {
-              id_alumno: asig.id_alumno,
-              nombre: asig.alumno?.nombre || perfil.nombre || 'Alumno',
-              rut: asig.alumno?.rut || perfil.rut || '',
-              correo: asig.alumno?.correo || perfil.correo || '',
-              horas_acumuladas: perfil.horas_acumuladas || 0,
-              asignado: asig.estado_asignacion === 'Asignado',
-              cancelo: asig.estado_asignacion === 'Canceló turno',
-              motivo_cancelacion: asig.motivo_cancelacion || '',
-              horas_validadas: asig.horas_validadas || 0,
-              hora_entrada_real: asig.hora_entrada_real,
-              hora_salida_real: asig.hora_salida_real,
-            };
-          });
+    return catalogoAlumnos
+      .filter((al) => {
+        const coincide = (al.nombre || '').toLowerCase().includes(q) || (al.rut || '').toLowerCase().includes(q);
+        const yaEnLista = interesados.some((i) => String(i.id_alumno) === String(al.id_alumno));
+        return coincide && !yaEnLista;
+      })
+      .map((al) => ({
+        ...al,
+        supera_limite: (al.horas_acumuladas + duracionTurno) > 60
+      }))
+      .slice(0, 8);
+  }, [terminoBusqueda, catalogoAlumnos, interesados, duracionTurno]);
 
-          precargados.sort((a, b) => (a.cancelo === b.cancelo ? a.horas_acumuladas - b.horas_acumuladas : a.cancelo ? 1 : -1));
-          setInteresados(precargados);
-          if (turnoVigente.estado !== 'Abierto') setModoEdicion(false);
-          armarListaAsistencia(precargados, turnoVigente);
-        }
-      } catch (err) {
-        console.error('Error al inicializar turno:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
+  const handleAgregarInteresado = (al) => {
+    if (!modoEdicion || estadoTurno === 'Cerrado') return;
+    if (interesados.some((i) => String(i.id_alumno) === String(al.id_alumno))) return;
 
-    cargar();
-  }, [idTurnoActual, armarListaAsistencia]);
+    const nuevo = {
+      id_alumno: al.id_alumno,
+      id_asignacion: null,
+      nombre: al.nombre,
+      rut: al.rut,
+      horas_acumuladas: Number(al.horas_acumuladas) || 0,
+      asignado: false,
+      asignadoOriginal: false,
+      asistenciaActiva: true,
+      hora_entrada_real: horaInicioBase,
+      hora_salida_real: horaTerminoBase,
+      hora_entrada_borrador: null,
+      hora_salida_borrador: null,
+      horas_validadas: 0,
+      cancelo: false,
+      motivo_cancelacion: '',
+      estado_asignacion: 'En espera'
+    };
 
-  const totalAsignados = useMemo(() => interesados.filter((i) => i.asignado && !i.cancelo).length, [interesados]);
+    actualizarInteresadosConBorrador((prev) => {
+      const lista = [...prev, nuevo];
+      lista.sort((a, b) => {
+        if (a.cancelo && !b.cancelo) return 1;
+        if (!a.cancelo && b.cancelo) return -1;
+        return (a.horas_acumuladas || 0) - (b.horas_acumuladas || 0);
+      });
+      return lista;
+    });
 
-  const handleAgregarInteresado = (alumno) => {
-    if (interesados.some((i) => i.id_alumno === alumno.id_alumno)) return;
-    const nueva = [...interesados, { ...alumno, asignado: false, cancelo: false, motivo_cancelacion: '' }];
-    nueva.sort((a, b) => a.horas_acumuladas - b.horas_acumuladas);
-    setInteresados(nueva);
-  };
-
-  const handleAutoAsignar = () => {
-    if (!modoEdicion || interesados.length === 0) return;
-    let cupos = turno.cupos || 5;
-    setInteresados(interesados.map((item) => {
-      if (item.cancelo) return item;
-      const asignar = cupos > 0;
-      if (asignar) cupos--;
-      return { ...item, asignado: asignar };
-    }));
-  };
-
-  const handleToggleAsignado = (item) => {
-    if (!modoEdicion || item.cancelo) return;
-    if (item.asignado && turno.estado !== 'Abierto') {
-      setAlumnoParaBaja(item);
-      return;
-    }
-    const cuposMax = turno.cupos || 5;
-    if (!item.asignado && totalAsignados >= cuposMax) {
-      alert(`Límite de vacantes alcanzado (${cuposMax}/${cuposMax}).`);
-      return;
-    }
-    setInteresados(interesados.map((i) => (i.id_alumno === item.id_alumno ? { ...i, asignado: !i.asignado } : i)));
-  };
-
-  const handleConfirmarBaja = ({ tipo, motivo }) => {
-    if (!alumnoParaBaja) return;
-    const esCancel = tipo === 'cancelacion';
-    const nueva = interesados.map((i) => 
-      i.id_alumno === alumnoParaBaja.id_alumno
-        ? { ...i, asignado: false, cancelo: esCancel, motivo_cancelacion: esCancel ? motivo || 'Canceló turno' : '' }
-        : i
-    );
-    nueva.sort((a, b) => (a.cancelo === b.cancelo ? a.horas_acumuladas - b.horas_acumuladas : a.cancelo ? 1 : -1));
-    setInteresados(nueva);
-    setAlumnoParaBaja(null);
+    setTerminoBusqueda('');
   };
 
   const handleQuitarInteresado = (idAlumno) => {
-    setInteresados(interesados.filter((i) => i.id_alumno !== idAlumno));
-  };
+    if (!modoEdicion || estadoTurno === 'Cerrado') return;
 
-  const handleGuardarTurno = async () => {
-    if (totalAsignados === 0) {
-      alert('Debes asignar al menos a 1 alumno titular para poder guardar el turno.');
+    const target = interesados.find(
+      (alumno) => String(alumno.id_alumno) === String(idAlumno)
+    );
+
+    if (!target) return;
+
+    // Si ya estaba guardado previamente en Supabase como titular, requiere modal de baja
+    if (turnoYaGuardado && target.asignadoOriginal) {
+      setAlumnoParaBaja(target);
       return;
     }
+
+    actualizarInteresadosConBorrador((actuales) =>
+      actuales.filter((alumno) => String(alumno.id_alumno) !== String(idAlumno))
+    );
+  };
+
+  const handleToggleAsignado = (idAlumno) => {
+    if (!modoEdicion || estadoTurno === 'Cerrado') return;
+    const target = interesados.find((i) => String(i.id_alumno) === String(idAlumno));
+    if (!target || target.cancelo) return;
+
+    if (target.asignado && turnoYaGuardado && target.asignadoOriginal) {
+      setAlumnoParaBaja(target);  
+      return;
+    }
+    if (!target.asignado && totalAsignados >= cuposTotales) return;
+
+    actualizarInteresadosConBorrador((prev) =>
+      prev.map((i) =>
+        String(i.id_alumno) === String(idAlumno)
+          ? { 
+              ...i, 
+              asignado: !i.asignado, 
+              estado_asignacion: !i.asignado ? 'Asignado' : 'En espera',
+              asistenciaActiva: true,
+              hora_entrada_real: i.hora_entrada_real || horaInicioBase,
+              hora_salida_real: i.hora_salida_real || horaTerminoBase
+            }
+          : i
+      )
+    );
+  };
+
+  const handleAutoAsignar = () => {
+    if (!modoEdicion || estadoTurno === 'Cerrado') return;
+    let libres = cuposTotales;
+    const actualizados = [...interesados]
+      .sort((a, b) => {
+        if (a.cancelo && !b.cancelo) return 1;
+        if (!a.cancelo && b.cancelo) return -1;
+        return (a.horas_acumuladas || 0) - (b.horas_acumuladas || 0);
+      })
+      .map((al) => {
+        if (al.cancelo) return al;
+        if (libres > 0) {
+          libres--;
+          return {
+            ...al,
+            asignado: true,
+            estado_asignacion: 'Asignado',
+            asistenciaActiva: true,
+            hora_entrada_real: al.hora_entrada_real || horaInicioBase,
+            hora_salida_real: al.hora_salida_real || horaTerminoBase
+          };
+        }
+        return { ...al, asignado: false, estado_asignacion: 'En espera' };
+      });
+
+    actualizarInteresadosConBorrador(actualizados);
+  };
+
+  const handleConfirmarBaja = async ({ tipo, motivo }) => {
+    if (!alumnoParaBaja || !idTurno) return;
+
+    const esCancelacion = tipo === 'cancelacion';
+    const motivoFinal = esCancelacion ? (motivo || 'Canceló turno') : null;
+
     try {
       setGuardando(true);
-      await guardarAsignaciones(idTurnoActual, interesados, duracionTurno);
-      setModoEdicion(false);
-      setTurno((prev) => ({ ...prev, estado: 'Asignado' }));
-      armarListaAsistencia(interesados);
-      alert('Turno y asignaciones guardadas exitosamente en Supabase.');
+
+      const { error } = await supabase.rpc('registrar_baja_turno', {
+        p_id_turno: Number(idTurno),
+        p_id_alumno: Number(alumnoParaBaja.id_alumno),
+        p_tipo: tipo,
+        p_motivo: motivoFinal
+      });
+
+      if (error) throw error;
+
+      actualizarInteresadosConBorrador((prev) =>
+        prev.map((item) =>
+          String(item.id_alumno) === String(alumnoParaBaja.id_alumno)
+            ? {
+                ...item,
+                asignado: false,
+                asignadoOriginal: false,
+                cancelo: esCancelacion,
+                motivo_cancelacion: motivoFinal || '',
+                estado_asignacion: esCancelacion ? 'Canceló turno' : 'En espera'
+              }
+            : item
+        )
+      );
+
+      setAlumnoParaBaja(null);
     } catch (err) {
-      console.error(err);
-      alert('Error al guardar asignaciones en Supabase.');
+      console.error('Error guardando la baja:', err);
     } finally {
       setGuardando(false);
     }
   };
 
-  const calcularHorasFila = (ini, fin, asistio) => {
-    if (!asistio || ini === '--:--' || fin === '--:--') return 0.0;
-    const [hI, mI] = ini.split(':').map(Number);
-    const [hF, mF] = fin.split(':').map(Number);
-    const totalMin = (hF * 60 + mF) - (hI * 60 + mI);
-    return totalMin > 0 ? Number((totalMin / 60).toFixed(2)) : 0.0;
-  };
-
-  const handleCambioHoraAsistencia = (idAlumno, campo, valor) => {
-    if (turno.estado === 'Cerrado') return;
-    setAsistenciaRows((prev) =>
-      prev.map((r) => {
-        if (r.id_alumno !== idAlumno) return r;
-        const e = campo === 'hora_entrada' ? valor : r.hora_entrada;
-        const s = campo === 'hora_salida' ? valor : r.hora_salida;
-        return { ...r, [campo]: valor, horas_calculadas: calcularHorasFila(e, s, r.asistio) };
-      })
-    );
-  };
-
-  const handleValidarHoraBlur = (idAlumno, campo) => {
-    if (turno.estado === 'Cerrado') return;
-    setAsistenciaRows((prev) =>
-      prev.map((r) => {
-        if (r.id_alumno !== idAlumno) return r;
-        if (horaInicioBase !== '--:--' && r.hora_entrada < horaInicioBase) {
-          alert(`La hora de entrada no puede ser anterior al inicio del bloque (${horaInicioBase}). Se restaurará el horario base.`);
-          return { ...r, hora_entrada: horaInicioBase, horas_calculadas: calcularHorasFila(horaInicioBase, r.hora_salida, r.asistio) };
-        }
-        if (r.hora_entrada >= r.hora_salida) {
-          alert(`Incoherencia horaria: la hora de entrada (${r.hora_entrada}) debe ser anterior a la salida (${r.hora_salida}).`);
-          const e = campo === 'hora_entrada' ? horaInicioBase : r.hora_entrada;
-          const s = campo === 'hora_salida' ? horaTerminoBase : r.hora_salida;
-          return { ...r, hora_entrada: e, hora_salida: s, horas_calculadas: calcularHorasFila(e, s, r.asistio) };
-        }
-        return r;
-      })
-    );
-  };
-
-  const handleTogglePresenteAsistencia = (idAlumno) => {
-    if (turno.estado === 'Cerrado') return;
-    setAsistenciaRows((prev) =>
-      prev.map((r) => (r.id_alumno === idAlumno ? { ...r, asistio: !r.asistio, horas_calculadas: calcularHorasFila(r.hora_entrada, r.hora_salida, !r.asistio) } : r))
-    );
-  };
-
-  const handleSellarTurnoBD = async () => {
+  // PERSISTENCIA DEFINITIVA: Guarda en Supabase y destruye el borrador local
+  const handleGuardarTurno = async () => {
+    if (!idTurno) return;
     try {
       setGuardando(true);
-      for (const row of asistenciaRows) {
-        await supabase
+      const registros = interesados.map((item) => {
+        const cancelo = item.cancelo || item.estado_asignacion === 'Canceló turno';
+        const asignado = item.asignado || item.estado_asignacion === 'Asignado';
+        const estado = cancelo ? 'Canceló turno' : asignado ? 'Asignado' : 'En espera';
+        return {
+          id_turno: Number(idTurno),
+          id_alumno: Number(item.id_alumno),
+          estado_asignacion: estado,
+          motivo_cancelacion: cancelo ? (item.motivo_cancelacion || 'Canceló turno') : null,
+          horas_validadas: 0
+        };
+      });
+
+      if (registros.length > 0) {
+        const { error } = await supabase
           .from('asignacion_turno')
-          .update({
-            horas_validadas: row.horas_calculadas,
-            hora_entrada_real: row.asistio ? row.hora_entrada : null,
-            hora_salida_real: row.asistio ? row.hora_salida : null,
-            estado_asignacion: row.asistio ? 'Asignado' : 'Ausente',
-          })
-          .eq('id_turno', idTurnoActual)
-          .eq('id_alumno', row.id_alumno);
+          .upsert(registros, { onConflict: 'id_turno,id_alumno' });
+        if (error) throw error;
       }
-      await supabase.from('turno').update({ estado: 'Cerrado' }).eq('id_turno', idTurnoActual);
-      setTurno((prev) => ({ ...prev, estado: 'Cerrado' }));
+
+      await supabase.from('turno').update({ estado: 'Asignado' }).eq('id_turno', idTurno);
+      
+      // Limpiar el borrador temporal al consolidar
+      if (storageKey) {
+        sessionStorage.removeItem(storageKey);
+      }
+
+      setTurnoYaGuardado(true);
       setModoEdicion(false);
-      alert('Turno cerrado y horas selladas inmutablemente.');
+      await cargarDatos();
     } catch (err) {
-      console.error(err);
-      alert('Error al sellar el turno en Supabase.');
+      console.error('Error guardando turno:', err);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const fechaEvento = String(turno?.fecha_inicio || '').slice(0, 10);
+  const hoyLocal = obtenerFechaLocal();
+
+  const puedeAbrirLista =
+    fechaEvento === hoyLocal &&
+    estadoTurno !== 'Cerrado';
+
+  const modoEjecucion = listaAbierta || estadoTurno === 'Cerrado';
+
+  const asistenciaRows = useMemo(() => {
+    return interesados
+      .filter((al) => (al.asignadoOriginal || al.asignado) && !al.cancelo)
+      .map((al) => {
+        const entrada = al.hora_entrada_borrador ?? al.hora_entrada_real ?? horaInicioBase;
+        const salida = al.hora_salida_borrador ?? al.hora_salida_real ?? horaTerminoBase;
+        const estaPresente = al.asistenciaActiva !== false;
+
+        return {
+          id_alumno: al.id_alumno,
+          id_asignacion: al.id_asignacion,
+          nombre: al.nombre,
+          rut: al.rut,
+          asistio: estaPresente,
+          hora_entrada: entrada,
+          hora_salida: salida,
+          horas_calculadas: estaPresente
+            ? calcularHorasReales(entrada, salida).toFixed(2)
+            : '0.00'
+        };
+      });
+  }, [interesados, horaInicioBase, horaTerminoBase]);
+
+  const registrarAuditoria = async (registro) => {
+    const { data, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
+    if (!data.user) throw new Error('Debes iniciar sesión para registrar cambios.');
+
+    const { error } = await supabase.from('asistencia_auditoria').insert({
+      ...registro,
+      id_turno: Number(idTurno),
+      usuario_id: data.user.id
+    });
+
+    if (error) throw error;
+  };
+
+  const handleAbrirLista = () => {
+    actualizarInteresadosConBorrador((prev) =>
+      prev.map((al) => {
+        const esTitular = (al.asignado || al.asignadoOriginal) && !al.cancelo;
+        if (!esTitular) return al;
+
+        return {
+          ...al,
+          asistenciaActiva: al.asistenciaActiva ?? true,
+          hora_entrada_real: al.hora_entrada_real && al.hora_entrada_real !== '--:--'
+            ? al.hora_entrada_real
+            : horaInicioBase,
+          hora_salida_real: al.hora_salida_real && al.hora_salida_real !== '--:--'
+            ? al.hora_salida_real
+            : horaTerminoBase,
+          horas_validadas: al.horas_validadas || duracionTurno
+        };
+      })
+    );
+
+    setListaAbierta(true);
+  };
+
+  const handleCambioHora = (idAlumno, campo, valor) => {
+    const campoBorrador = campo === 'hora_entrada'
+      ? 'hora_entrada_borrador'
+      : 'hora_salida_borrador';
+
+    setInteresados((prev) =>
+      prev.map((al) =>
+        String(al.id_alumno) === String(idAlumno)
+          ? { ...al, [campoBorrador]: valor }
+          : al
+      )
+    );
+  };
+
+  const handleValidarHora = async (idAlumno, campo) => {
+    const al = interesados.find((i) => String(i.id_alumno) === String(idAlumno));
+    if (!al) return;
+
+    const entradaEditada = campo === 'hora_entrada';
+    const campoReal = entradaEditada ? 'hora_entrada_real' : 'hora_salida_real';
+    const campoBorrador = entradaEditada
+      ? 'hora_entrada_borrador'
+      : 'hora_salida_borrador';
+    const nuevoValor = al[campoBorrador];
+    if (nuevoValor == null) return;
+
+    const formatoValido = /^([01]\d|2[0-3]):[0-5]\d$/;
+    const descartar = () => setInteresados((prev) =>
+      prev.map((i) =>
+        String(i.id_alumno) === String(idAlumno)
+          ? { ...i, [campoBorrador]: null }
+          : i
+      )
+    );
+
+    if (!formatoValido.test(nuevoValor)) {
+      descartar();
+      return;
+    }
+
+    const entrada = entradaEditada ? nuevoValor : al.hora_entrada_real;
+    const salida = entradaEditada ? al.hora_salida_real : nuevoValor;
+
+    const horas = calcularHorasReales(entrada, salida);
+    if (horas <= 0) {
+      descartar();
+      return;
+    }
+
+    try {
+      if (al.id_asignacion && al[campoReal] !== nuevoValor) {
+        await registrarAuditoria({
+          id_alumno: Number(idAlumno),
+          id_asignacion: al.id_asignacion,
+          tipo_evento: 'cambio_hora',
+          campo: campoReal,
+          valor_anterior: al[campoReal],
+          valor_nuevo: nuevoValor
+        });
+      }
+
+      setInteresados((prev) =>
+        prev.map((i) =>
+          String(i.id_alumno) === String(idAlumno)
+            ? {
+                ...i,
+                [campoReal]: nuevoValor,
+                [campoBorrador]: null,
+                horas_validadas: i.asistenciaActiva ? horas : 0
+              }
+            : i
+        )
+      );
+    } catch (err) {
+      console.error('Error registrando cambio horario:', err);
+    }
+  };
+
+  const handleTogglePresente = async (idAlumno) => {
+    const al = interesados.find((i) => String(i.id_alumno) === String(idAlumno));
+    if (!al || estadoTurno === 'Cerrado') return;
+
+    const asistio = !al.asistenciaActiva;
+
+    try {
+      if (al.id_asignacion) {
+        await registrarAuditoria({
+          id_alumno: Number(idAlumno),
+          id_asignacion: al.id_asignacion,
+          tipo_evento: 'asistencia',
+          campo: 'asistio',
+          valor_anterior: al.asistenciaActiva,
+          valor_nuevo: asistio
+        });
+      }
+
+      setInteresados((prev) =>
+        prev.map((i) =>
+          String(i.id_alumno) === String(idAlumno)
+            ? {
+                ...i,
+                asistenciaActiva: asistio,
+                horas_validadas: asistio
+                  ? calcularHorasReales(i.hora_entrada_real, i.hora_salida_real)
+                  : 0
+              }
+            : i
+        )
+      );
+    } catch (err) {
+      console.error('Error en cambio de asistencia:', err);
+    }
+  };
+
+  const handleCerrarLista = async () => {
+    if (estadoTurno === 'Cerrado') return;
+
+    const titulares = interesados.filter((al) => (al.asignadoOriginal || al.asignado) && !al.cancelo);
+
+    try {
+      setGuardando(true);
+
+      for (const al of titulares) {
+        const horas = al.asistenciaActiva
+          ? calcularHorasReales(al.hora_entrada_real, al.hora_salida_real)
+          : 0;
+
+        const cambios = {
+          estado_asignacion: al.asistenciaActiva ? 'Asistió' : 'Ausente',
+          hora_entrada_real: al.asistenciaActiva ? al.hora_entrada_real : null,
+          hora_salida_real: al.asistenciaActiva ? al.hora_salida_real : null,
+          horas_validadas: horas,
+          fecha_cierre: new Date().toISOString()
+        };
+
+        const { error } = await supabase
+          .from('asignacion_turno')
+          .update(cambios)
+          .eq('id_asignacion', al.id_asignacion);
+
+        if (error) throw error;
+
+        await registrarAuditoria({
+          id_alumno: Number(al.id_alumno),
+          id_asignacion: al.id_asignacion,
+          tipo_evento: 'cierre_lista',
+          campo: 'asistencia',
+          valor_anterior: { asistio: al.asistenciaActiva },
+          valor_nuevo: { asistio: al.asistenciaActiva, horas_validadas: horas }
+        });
+      }
+
+      const { error } = await supabase
+        .from('turno')
+        .update({ estado: 'Cerrado' })
+        .eq('id_turno', idTurno);
+
+      if (error) throw error;
+
+      if (storageKey) {
+        sessionStorage.removeItem(storageKey);
+      }
+
+      setEstadoTurno('Cerrado');
+      setListaAbierta(false);
+    } catch (err) {
+      console.error('Error al cerrar el turno:', err);
     } finally {
       setGuardando(false);
     }
@@ -287,32 +659,45 @@ export function useDetalleTurno(turnoInicial) {
 
   return {
     turno,
-    idTurnoActual,
+    idTurnoActual: idTurno,
     loading,
+    cargando: loading,
     guardando,
-    vistaAsistencia,
-    setVistaAsistencia,
     modoEdicion,
     setModoEdicion,
-    totalAsignados,
+    cuposTotales,
     fechaStr,
-    duracionTurno,
+    fechaFormateada: fechaStr,
     horaInicioBase,
     horaTerminoBase,
-    alumnosCatalogo,
+    duracionTurno,
     interesados,
-    asistenciaRows,
+    totalAsignados,
+    terminoBusqueda,
+    setTerminoBusqueda,
+    resultadosBusqueda,
     alumnoParaBaja,
     setAlumnoParaBaja,
     handleAgregarInteresado,
-    handleAutoAsignar,
-    handleToggleAsignado,
-    handleConfirmarBaja,
+    handleSeleccionarEnBuscador: handleAgregarInteresado,
     handleQuitarInteresado,
+    handleRemoverInteresado: handleQuitarInteresado,
+    handleToggleAsignado,
+    handleAutoAsignar,
+    handleConfirmarBaja,
     handleGuardarTurno,
-    handleCambioHoraAsistencia,
-    handleValidarHoraBlur,
-    handleTogglePresenteAsistencia,
-    handleSellarTurnoBD,
+    listaAbierta,
+    setListaAbierta,
+    estadoTurno,
+    setEstadoTurno,
+    turnoYaGuardado,
+    modoEjecucion,
+    asistenciaRows,
+    puedeAbrirLista,
+    handleAbrirLista,
+    handleCambioHora,
+    handleValidarHora,
+    handleTogglePresente,
+    handleCerrarLista,
   };
 }

@@ -1,207 +1,232 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { ArrowLeft, Search } from 'lucide-react';
 import { useDetalleTurno } from '../hooks/useDetalleTurno.js';
 import TablaComparativa from './TablaComparativa.jsx';
-import ModalCancelacion from '../views/ModalCancelacion.jsx';
 import ListaAsistencia from '../views/ListaAsistencia.jsx';
-import {
-  ArrowLeft,
-  Search,
-  Check,
-  Save,
-  Edit3,
-  Loader2,
-  UserCheck,
-  AlertCircle
-} from 'lucide-react';
+import ModalCancelacion from '../views/ModalCancelacion.jsx';
 import './DetalleTurno.css';
 
-export default function DetalleTurno({ turno: turnoInicial, onVolver }) {
-  const t = useDetalleTurno(turnoInicial);
-  const [terminoBusqueda, setTerminoBusqueda] = useState('');
+export default function DetalleTurno(props = {}) {
+  const turnoEntrante = props.turno || props.hook?.turno || props;
+  const internalHook = useDetalleTurno(turnoEntrante);
+  const t = props.hook?.idTurnoActual ? props.hook : internalHook;
+  const onVolver = props.onVolver || props.hook?.onVolver;
 
-  if (t.loading) {
+if (t.loading || t.cargando) {
     return (
-      <div className="konor-detalle-loading">
-        <Loader2 size={36} className="konor-spin text-[#43b0c4]" />
-        <p>Cargando información del turno...</p>
-      </div>
-    );
-  }
+      <div className="konor-detalle-view animate-pulse" style={{ opacity: 0.85 }}>
+        {/* Botón Volver falso */}
+        <div className="konor-skeleton-block" style={{ width: '130px', height: '24px', marginBottom: '20px' }} />
 
-  if (!t.idTurnoActual) {
-    return (
-      <div className="konor-detalle-view">
-        <div className="konor-detalle-notfound">
-          <AlertCircle size={44} className="text-amber-500 mb-3" />
-          <h2>No se ha seleccionado ningún turno</h2>
-          <p>Regresa a la lista de turnos para seleccionar uno válido.</p>
-          <button onClick={onVolver} className="konor-btn-primary mt-4">
-            ← Volver al listado
-          </button>
+        {/* Título de Turno */}
+        <div className="konor-skeleton-block" style={{ width: '320px', height: '32px', marginBottom: '24px' }} />
+
+        {/* Panel shift-overview */}
+        <section className="shift-overview" style={{ border: '1px solid #e2e8f0', padding: '16px', borderRadius: '8px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: '24px' }}>
+              <div className="konor-skeleton-block" style={{ width: '100px', height: '42px' }} />
+              <div className="konor-skeleton-block" style={{ width: '90px', height: '42px' }} />
+              <div className="konor-skeleton-block" style={{ width: '110px', height: '42px' }} />
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <div className="konor-skeleton-block" style={{ width: '220px', height: '38px' }} />
+              <div className="konor-skeleton-block" style={{ width: '110px', height: '38px' }} />
+            </div>
+          </div>
+        </section>
+
+        {/* Cabecera y cuerpo de tabla comparativa */}
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', background: '#fff' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <div className="konor-skeleton-block" style={{ width: '180px', height: '22px' }} />
+            <div className="konor-skeleton-block" style={{ width: '80px', height: '22px' }} />
+          </div>
+
+          {/* Filas simuladas */}
+          {[1, 2, 3].map((n) => (
+            <div
+              key={n}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 0',
+                borderTop: '1px solid #f1f5f9'
+              }}
+            >
+              <div className="konor-skeleton-block" style={{ width: '240px', height: '20px' }} />
+              <div className="konor-skeleton-block" style={{ width: '80px', height: '20px' }} />
+              <div className="konor-skeleton-block" style={{ width: '40px', height: '20px' }} />
+            </div>
+          ))}
         </div>
       </div>
     );
   }
-
-  const cuposTotales = t.turno.cupos || 5;
-  const botonGuardarDeshabilitado = t.guardando || (t.modoEdicion && t.totalAsignados === 0);
-
-  const handleSeleccionarEnBuscador = (alumno) => {
-    if (t.handleAgregarInteresado) {
-      t.handleAgregarInteresado(alumno);
-    }
-    setTerminoBusqueda('');
-  };
-
-  const resultadosBusqueda = terminoBusqueda.trim().length > 1
-    ? (t.alumnosCatalogo || []).filter((al) => {
-        const query = terminoBusqueda.toLowerCase();
-        const coincide = al.nombre?.toLowerCase().includes(query) || (al.rut && al.rut.toLowerCase().includes(query));
-        const yaEsta = (t.interesados || []).some((i) => i.id_alumno === al.id_alumno);
-        return coincide && !yaEsta;
-      }).slice(0, 5)
-    : [];
 
   return (
     <div className="konor-detalle-view">
-      <button type="button" onClick={onVolver} className="konor-detalle-back-btn">
-        <ArrowLeft size={16} />
-        <span>Volver a turnos</span>
+      <button type="button" className="btn-back-link" onClick={onVolver}>
+        <ArrowLeft size={16} /> Volver a turnos
       </button>
 
-      {/* Título Principal H1 único para el nombre del evento */}
       <h1 className="konor-detalle-title">
-        Lista de turno: {t.turno.nombre_evento || 'Turno Operativo'}
+        Lista de turno: {t.turno?.nombre_evento || 'Sin título'}
       </h1>
 
-      {/* Panel de Resumen Horizontal sin el nombre repetido */}
-      <div className="shift-overview">
+      <section className="shift-overview">
         <div className="shift-meta-group">
-          <div className="shift-meta-item">
-            <span className="shift-meta-label">DÍA DEL EVENTO</span>
-            <span className="shift-meta-value">{t.fechaStr}</span>
-          </div>
-
-          <div className="shift-meta-item">
-            <span className="shift-meta-label">HORA INICIO</span>
-            <span className="shift-meta-value">{t.horaInicioBase}</span>
-          </div>
-
-          <div className="shift-meta-item">
-            <span className="shift-meta-label">HORA SALIDA</span>
-            <span className="shift-meta-value">
-              {t.horaTerminoBase} <span className="duration-tag">({t.duracionTurno} hrs)</span>
-            </span>
-          </div>
+          <div className="meta-box"><span className="meta-label">DÍA DEL EVENTO</span><span className="meta-value">{t.fechaStr || t.fechaFormateada}</span></div>
+          <div className="meta-box"><span className="meta-label">HORA INICIO</span><span className="meta-value">{t.horaInicioBase}</span></div>
+          <div className="meta-box"><span className="meta-label">HORA SALIDA</span><span className="meta-value">{t.horaTerminoBase} ({t.duracionTurno} hrs)</span></div>
         </div>
 
-        {!t.vistaAsistencia && (
+        {/* Buscador visible pero bloqueado si el turno está guardado (modoEdicion = false) */}
+        {t.estadoTurno !== 'Cerrado' && (
           <div className="assignment-controls">
             <div className="search-box-wrapper">
-              <Search size={16} className="search-box-icon" />
+              <Search className="search-box-icon" size={16} />
               <input
                 type="text"
-                placeholder="Buscar alumno para agregar..."
-                value={terminoBusqueda}
-                onChange={(e) => setTerminoBusqueda(e.target.value)}
-                disabled={!t.modoEdicion || t.turno.estado === 'Cerrado'}
+                placeholder={t.modoEdicion ? "Buscar alumno para agregar..." : "Presiona 'Editar turno' para buscar alumnos"}
+                value={t.terminoBusqueda || ''}
+                onChange={(e) => t.setTerminoBusqueda(e.target.value)}
+                disabled={!t.modoEdicion}
                 className="search-box-input"
+                style={{ backgroundColor: t.modoEdicion ? '#ffffff' : '#f1f5f9', cursor: t.modoEdicion ? 'text' : 'not-allowed' }}
               />
-              {resultadosBusqueda.length > 0 && (
+              {t.modoEdicion && (t.terminoBusqueda || '').trim().length >= 1 && (
                 <div className="search-dropdown-results">
-                  {resultadosBusqueda.map((al) => (
-                    <div
-                      key={al.id_alumno}
-                      onClick={() => handleSeleccionarEnBuscador(al)}
-                      className="search-dropdown-item"
-                    >
-                      <span className="item-name">{al.nombre}</span>
-                      <span className="item-hours">{al.horas_acumuladas || 0} hrs</span>
-                    </div>
-                  ))}
+                  {(t.resultadosBusqueda || []).length > 0 ? (
+                    t.resultadosBusqueda.map((al) => (
+                      <div key={al.id_alumno} className="search-dropdown-item">
+                        <div className="search-item-left">
+                          <span className="search-item-name">{al.nombre}</span>
+                          <span className="search-item-hours">
+                            Horas acumuladas: {(Number(al.horas_acumuladas) || 0).toFixed(1).replace('.', ',')} hrs
+                          </span>
+                        </div>
+                        <div className="search-item-right">
+                          {al.supera_limite ? (
+                            <span className="badge-status-limit">SUPERÓ LÍMITE</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn-search-add"
+                              onMouseDown={(e) => { e.preventDefault(); t.handleAgregarInteresado(al); }}
+                            >
+                              + Agregar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="search-dropdown-empty">No se encontraron alumnos disponibles</div>
+                  )}
                 </div>
               )}
             </div>
 
             <button
               type="button"
+              className="btn-autoassign"
               onClick={t.handleAutoAsignar}
-              disabled={!t.modoEdicion || (t.interesados || []).length === 0 || t.turno.estado === 'Cerrado'}
-              className="btn-autoasignar-oficial"
+              disabled={!t.modoEdicion || t.totalAsignados >= t.cuposTotales || (t.interesados || []).filter((i) => !i.cancelo).length === 0}
             >
-              <Check size={16} />
-              <span>✓ Auto-asignar</span>
+              Autoasignar
             </button>
           </div>
         )}
-      </div>
+      </section>
 
-      {!t.vistaAsistencia ? (
-        <TablaComparativa
-          interesados={t.interesados}
-          modoEdicion={t.modoEdicion}
-          estadoTurno={t.turno.estado}
-          cuposTotales={cuposTotales}
+      {/* SEPARACIÓN DE FASES */}
+      {t.modoEjecucion ? (
+        <ListaAsistencia
+          turno={{ ...t.turno, estado: t.estadoTurno }}
+          asistenciaRows={t.asistenciaRows}
+          cuposTotales={t.cuposTotales}
           totalAsignados={t.totalAsignados}
-          onToggleAsignado={t.handleToggleAsignado}
-          onQuitar={t.handleQuitarInteresado}
+          onCambioHora={t.handleCambioHora}
+          onValidarHora={t.handleValidarHora}
+          onTogglePresente={t.handleTogglePresente}
+          onSellarTurno={t.handleCerrarLista}
+          onVolverAsignacion={() => t.setListaAbierta(false)}
+          guardando={t.guardando}
         />
       ) : (
-        <ListaAsistencia
-          turno={t.turno}
-          asistenciaRows={t.asistenciaRows}
-          onCambioHora={t.handleCambioHoraAsistencia}
-          onValidarHora={t.handleValidarHoraBlur}
-          onTogglePresente={t.handleTogglePresenteAsistencia}
-          onSellarTurno={t.handleSellarTurnoBD}
-          guardando={t.guardando}
+        <TablaComparativa
+          interesados={t.interesados || []}
+          cupos={t.cuposTotales}
+          asignados={t.totalAsignados}
+          modoEdicion={t.modoEdicion}
+          onToggleAsignado={t.handleToggleAsignado}
+          onRemoverInteresado={t.handleQuitarInteresado}
         />
       )}
 
-      <div className="footer-actions">
-        {!t.vistaAsistencia ? (
-          <>
-            {t.turno.estado === 'Asignado' && (
-              <button
-                type="button"
-                onClick={() => t.setVistaAsistencia(true)}
-                className="btn-abrir-lista"
-              >
-                <UserCheck size={16} />
-                <span>Abrir lista</span>
-              </button>
-            )}
-
-            {t.turno.estado !== 'Cerrado' && (
-              <button
-                type="button"
-                onClick={t.modoEdicion ? t.handleGuardarTurno : () => t.setModoEdicion(true)}
-                disabled={botonGuardarDeshabilitado}
-                className={`btn-guardar-turno ${!t.modoEdicion ? 'edit-mode' : ''}`}
-              >
-                {t.guardando ? (
-                  <>
-                    <Loader2 size={16} className="konor-spin text-[#43b0c4]" />
-                    <span>Guardando...</span>
-                  </>
-                ) : t.modoEdicion ? (
-                  <span>Guardar turno</span>
-                ) : (
-                  <span>✎ Editar turno</span>
-                )}
-              </button>
-            )}
-          </>
-        ) : (
+      {/* FOOTER DE ACCIONES */}
+      <footer className="footer-actions">
+        {t.estadoTurno === 'Cerrado' ? (
+          <div className="banner-lista-cerrada">
+            Lista de asistencia cerrada y sellada. Estado: INMUTABLE.
+          </div>
+        ) : t.modoEjecucion ? (
           <button
             type="button"
-            onClick={() => t.setVistaAsistencia(false)}
-            className="btn-volver-asignacion-link"
+            className="btn-save-turno"
+            onClick={t.handleCerrarLista}
+            disabled={t.guardando}
           >
-            ← Volver a Asignación
+            {t.guardando ? 'Cerrando...' : 'Cerrar lista'}
           </button>
+        ) : (
+          <div className="footer-actions-row" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            
+            <button
+              type="button"
+              className="btn-edit-turno"
+              onClick={t.handleAbrirLista}
+              disabled={!t.puedeAbrirLista}
+              style={{
+                opacity: t.puedeAbrirLista ? 1 : 0.4,
+                backgroundColor: t.puedeAbrirLista ? '#ffffff' : '#f1f5f9',
+                color: t.puedeAbrirLista ? '#06113C' : '#94a3b8',
+                borderColor: t.puedeAbrirLista ? '#cbd5e1' : '#e2e8f0',
+                cursor: t.puedeAbrirLista ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s ease'
+              }}
+              title={
+                t.puedeAbrirLista 
+                  ? "Abrir lista oficial de asistencia del evento" 
+                  : "El control de asistencia solo se habilita el día programado del evento"
+              }
+            >
+              Abrir lista
+            </button>
+
+            {t.modoEdicion ? (
+              <button
+                type="button"
+                className="btn-save-turno"
+                onClick={t.handleGuardarTurno}
+                disabled={t.guardando || t.totalAsignados === 0}
+              >
+                {t.guardando ? 'Guardando...' : 'Guardar turno'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn-edit-turno"
+                onClick={() => t.setModoEdicion(true)}
+              >
+                ✎ Editar turno
+              </button>
+            )}
+          </div>
         )}
-      </div>
+      </footer>
 
       {t.alumnoParaBaja && (
         <ModalCancelacion

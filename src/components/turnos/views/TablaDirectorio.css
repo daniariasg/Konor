@@ -113,9 +113,21 @@
 }
 
 /* Columnas Específicas */
-.td-directorio-nombre {
-  font-weight: 700;
-  color: #06113c;
+.tabla-directorio td:nth-child(2),
+.alumno-nombre-text,
+.nombre-alumno {
+  color: #1e293b !important; /* Gris oscuro neutro para legibilidad corporativa */
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+
+.tabla-directorio td a {
+  color: #1e293b !important;
+  text-decoration: none !important;
+}
+
+.tabla-directorio td a:hover {
+  color: #06113C !important; /* Sutil oscurecimiento al pasar el cursor, sin tono azul brillante */
 }
 
 .td-directorio-rut {

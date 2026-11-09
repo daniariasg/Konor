@@ -1,0 +1,194 @@
+.konor-cancelar-card {
+  width: 100%;
+  max-width: 480px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #cbd5e1;
+  padding: 28px;
+  box-shadow: 0 20px 25px -5px rgba(6, 17, 60, 0.15);
+  box-sizing: border-box;
+}
+
+.konor-cancelar-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.konor-cancelar-icon-badge {
+  padding: 10px;
+  background-color: #fee2e2;
+  color: #dc2626;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.konor-cancelar-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #06113c;
+  letter-spacing: -0.01em;
+}
+
+.konor-cancelar-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.konor-cancelar-target-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #0f172a;
+  margin-bottom: 16px;
+}
+
+.konor-motivos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.konor-motivo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.konor-motivo-item:hover {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.konor-motivo-radio {
+  accent-color: #dc2626;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.konor-motivo-text {
+  font-size: 0.825rem;
+  color: #334155;
+  font-weight: 500;
+}
+
+.konor-otro-wrapper {
+  margin-top: 10px;
+}
+
+.konor-otro-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.825rem;
+  outline: none;
+  box-sizing: border-box;
+  resize: none;
+  font-family: inherit;
+}
+
+.konor-otro-textarea:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+}
+
+.konor-cancelar-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.konor-btn-confirmar-cancelacion {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffffff;
+  background-color: #dc2626;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.konor-btn-confirmar-cancelacion:hover:not(:disabled) {
+  background-color: #b91c1c;
+}
+
+.konor-btn-confirmar-cancelacion:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.konor-confirmacion-box {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 16px;
+  margin: 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.konor-confirmacion-pregunta {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #991b1b;
+}
+
+.konor-confirmacion-motivo {
+  background-color: #ffffff;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.konor-btn-cancelar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1;
+  color: #64748b;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.konor-btn-cancelar:hover:not(:disabled) {
+  background-color: #f1f5f9;
+  color: #06113c;
+  border-color: #94a3b8;
+}

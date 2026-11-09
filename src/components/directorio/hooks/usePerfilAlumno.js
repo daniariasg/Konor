@@ -1,263 +1,260 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { updateAlumno, updateAlumnoBitacora, fetchTurnosAlumnoPorMes } from '../../../services/alumnosService.js';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { sanitizarTextoPlano, validarTextoSeguro } from '../../../utils/sanitizer.js';
 import { supabase } from '../../../config/supabase.js';
+
+const procesarEntradaSegura = (textoBruto) => {
+  const { esValido, valorLimpio } = validarTextoSeguro(textoBruto);
+  
+  if (!esValido) {
+    throw new Error('El texto ingresado contiene caracteres no permitidos o posibles scripts maliciosos.');
+  }
+  
+  return valorLimpio;
+};
 
 export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
   const [modoEdicion, setModoEdicion] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [guardandoNota, setGuardandoNota] = useState(false);
-  const [nuevaNota, setNuevaNota] = useState('');
-  
-  // Estado para el Toast / Alerta de éxito con temporizador
-  const [mensajeExito, setMensajeExito] = useState(false);
-  const [toastEnPausa, setToastEnPausa] = useState(false);
-  const toastTimerRef = useRef(null);
-  const tiempoRestanteRef = useRef(4000);
-  const tiempoInicioRef = useRef(null);
+  const [cargandoTurnos, setCargandoTurnos] = useState(false);
 
-  const [turnosHistorial, setTurnosHistorial] = useState([]);
-  const [cargandoTurnos, setCargandoTurnos] = useState(true);
-
-  // Lista de observaciones leídas directamente de alumno.bitacora
-  const [bitacoraNotas, setBitacoraNotas] = useState([]);
-
+  // Formulario del alumno
   const [form, setForm] = useState({
-    rut: '',
-    jornada: 'Diurna',
-    telefono: '',
-    correo: '',
+    rut: alumno?.rut || '',
+    jornada: alumno?.jornada === 'Vespertino' || alumno?.jornada === 'Vespertina' ? 'Vespertina' : 'Diurna',
+    telefono: alumno?.telefono || '',
+    correo: alumno?.correo || '',
+    carrera: alumno?.carrera || ''
   });
 
-  // Manejador del temporizador de 4 segundos para el Toast
-  const iniciarTemporizadorToast = () => {
-    limpiarTemporizadorToast();
-    tiempoInicioRef.current = Date.now();
-    toastTimerRef.current = setTimeout(() => {
-      setMensajeExito(false);
-      tiempoRestanteRef.current = 4000;
-    }, tiempoRestanteRef.current);
-  };
+  const [turnosHistorial, setTurnosHistorial] = useState([]);
+  const [notasManuales, setNotasManuales] = useState(
+    Array.isArray(alumno?.bitacora) ? alumno.bitacora : []
+  );
+  const [cancelacionesTurnos, setCancelacionesTurnos] = useState([]);
+  const [nuevaNota, setNuevaNota] = useState('');
 
-  const limpiarTemporizadorToast = () => {
-    if (toastTimerRef.current) {
-      clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = null;
-    }
-  };
-
-  const pausarTemporizadorToast = () => {
-    if (toastTimerRef.current) {
-      clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = null;
-      const transcurrido = Date.now() - tiempoInicioRef.current;
-      tiempoRestanteRef.current = Math.max(0, tiempoRestanteRef.current - transcurrido);
-      setToastEnPausa(true);
-    }
-  };
-
-  const reanudarTemporizadorToast = () => {
-    if (tiempoRestanteRef.current > 0 && mensajeExito) {
-      setToastEnPausa(false);
-      tiempoInicioRef.current = Date.now();
-      toastTimerRef.current = setTimeout(() => {
-        setMensajeExito(false);
-        tiempoRestanteRef.current = 4000;
-      }, tiempoRestanteRef.current);
-    }
-  };
-
-  const dispararToastExito = () => {
-    tiempoRestanteRef.current = 4000;
-    setToastEnPausa(false);
-    setMensajeExito(true);
-    iniciarTemporizadorToast();
-  };
-
-  useEffect(() => {
-    return () => {
-      limpiarTemporizadorToast();
-    };
-  }, []);
-
+  // Sincronizar datos al cambiar de alumno
   useEffect(() => {
     if (alumno) {
-      setModoEdicion(false);
       setForm({
         rut: alumno.rut || '',
-        jornada: alumno.jornada === 'Vespertino' ? 'Vespertina' : 'Diurna',
+        jornada: alumno.jornada === 'Vespertino' || alumno.jornada === 'Vespertina' ? 'Vespertina' : 'Diurna',
         telefono: alumno.telefono || '',
         correo: alumno.correo || '',
+        carrera: alumno.carrera || ''
       });
-      setNuevaNota('');
-
-      // Cargar bitácora oficial desde la base de datos
-      setBitacoraNotas(Array.isArray(alumno.bitacora) ? alumno.bitacora : []);
-
-      // Cargar turnos reales para el mes activo
-      const anio = new Date().getFullYear();
-      const mes = Number(mesActivo) || (new Date().getMonth() + 1);
-
-      setCargandoTurnos(true);
-      fetchTurnosAlumnoPorMes(alumno.id_alumno, anio, mes)
-        .then((data) => {
-          setTurnosHistorial(data || []);
-        })
-        .finally(() => {
-          setCargandoTurnos(false);
-        });
+      setNotasManuales(Array.isArray(alumno.bitacora) ? alumno.bitacora : []);
     }
-  }, [alumno, mesActivo]);
+  }, [alumno]);
 
-  // Totalizador reactivo: suma matemática estricta de las horas desplegadas
-  const totalHorasCalculadas = useMemo(() => {
-    return turnosHistorial.reduce((acc, t) => acc + (parseFloat(t.horas) || 0), 0);
-  }, [turnosHistorial]);
-
-  const totalHorasFormato = useMemo(() => {
-    return totalHorasCalculadas % 1 === 0
-      ? totalHorasCalculadas.toString()
-      : totalHorasCalculadas.toFixed(1).replace('.', ',');
-  }, [totalHorasCalculadas]);
-
-  // Agregar observación manual tipada estrictamente como 'comentario_manual'
-  const handleAgregarComentario = async (textoPersonalizado = null) => {
-    const textoFinal = (textoPersonalizado ?? nuevaNota).trim();
-    if (!textoFinal || !alumno?.id_alumno || guardandoNota) return;
-
-    const nuevaEntrada = {
-      id: Date.now().toString(), // Identificador único para el borrado seguro
-      fecha: new Date().toLocaleDateString('es-CL'),
-      tipo: 'comentario_manual',
-      autor: 'Administrador',
-      texto: textoFinal,
-    };
-
-    try {
-      setGuardandoNota(true);
-      const alumnoActualizado = await updateAlumnoBitacora(alumno.id_alumno, nuevaEntrada);
-
-      const bitacoraFresca = Array.isArray(alumnoActualizado.bitacora)
-        ? alumnoActualizado.bitacora
-        : [nuevaEntrada, ...bitacoraNotas];
-
-      setBitacoraNotas(bitacoraFresca);
-      setNuevaNota('');
-
-      if (onActualizado) {
-        onActualizado({
-          ...alumno,
-          ...alumnoActualizado,
-          horas_validadas: totalHorasCalculadas,
-        });
-      }
-    } catch (err) {
-      console.error('Error al agregar comentario a la bitácora:', err);
-      alert('Error al guardar la observación en la base de datos.');
-    } finally {
-      setGuardandoNota(false);
-    }
+  const handleInputChange = (campo, valor) => {
+    setForm((prev) => ({ ...prev, [campo]: valor }));
   };
 
-  // REGLA DE BORRADO ESTRICTO: Solo tipo 'comentario_manual'
-  const handleEliminarComentario = async (indexAEliminar) => {
-    const comentario = bitacoraNotas[indexAEliminar];
-    if (!comentario) return;
-
-    // Regla de inmutabilidad: Bloquear si no es manual
-    const tipo = comentario.tipo || 'comentario_manual';
-    if (tipo !== 'comentario_manual') {
-      alert('Este registro es parte del historial de auditoría inmutable del sistema y no puede eliminarse.');
-      return;
-    }
-
-    const confirmar = window.confirm('¿Deseas eliminar esta observación de desempeño?');
-    if (!confirmar) return;
-
-    const nuevoArreglo = bitacoraNotas.filter((_, idx) => idx !== indexAEliminar);
+  // 1. Cargar historial de turnos del mes activo (solo turnos con lista cerrada y sellada)
+  const cargarDatos = useCallback(async () => {
+    if (!alumno?.id_alumno) return;
 
     try {
-      setGuardandoNota(true);
+      setCargandoTurnos(true);
+      const ahora = new Date();
+      const año = ahora.getFullYear();
+      const mes = typeof mesActivo === 'number' ? mesActivo : ahora.getMonth();
+
+      const primerDia = new Date(Date.UTC(año, mes, 1, 0, 0, 0)).toISOString();
+      const ultimoDia = new Date(Date.UTC(año, mes + 1, 0, 23, 59, 59, 999)).toISOString();
+
+      // Consultar únicamente turnos cerrados/sellados del mes para el historial y cancelaciones para la bitácora
+      const [resTurnosMes, resCancelaciones] = await Promise.all([
+        supabase
+          .from('asignacion_turno')
+          .select(`
+            id_asignacion,
+            horas_validadas,
+            estado_asignacion,
+            turno!inner (
+              id_turno,
+              nombre_evento,
+              fecha_inicio,
+              fecha_termino
+            )
+          `)
+          .eq('id_alumno', alumno.id_alumno)
+          .in('estado_asignacion', ['Asistió', 'Ausente']) // CLAVE: Solo turnos cerrados
+          .gte('turno.fecha_inicio', primerDia)
+          .lte('turno.fecha_inicio', ultimoDia),
+        supabase
+          .from('asignacion_turno')
+          .select(`
+            id_asignacion,
+            motivo_cancelacion,
+            turno!inner (
+              id_turno,
+              nombre_evento,
+              fecha_inicio
+            )
+          `)
+          .eq('id_alumno', alumno.id_alumno)
+          .eq('estado_asignacion', 'Canceló turno')
+      ]);
+
+      if (resTurnosMes.error) throw resTurnosMes.error;
+
+      // Mapear turnos del mes
+      const turnosMapeados = (resTurnosMes.data || []).map((asig) => {
+        const t = asig.turno || {};
+        let fechaFormat = '--/--/----';
+        if (t.fecha_inicio) {
+          const f = t.fecha_inicio.substring(0, 10);
+          const [yyyy, mm, dd] = f.split('-');
+          fechaFormat = `${dd}/${mm}/${yyyy}`;
+        }
+        return {
+          id_asignacion: asig.id_asignacion,
+          id_turno: t.id_turno,
+          nombre_evento: t.nombre_evento,
+          fecha: fechaFormat,
+          horas_validadas: Number(asig.horas_validadas) || 0,
+          estado_asignacion: asig.estado_asignacion
+        };
+      });
+      setTurnosHistorial(turnosMapeados);
+
+      // Mapear cancelaciones como entradas de bitácora
+      const cancels = (resCancelaciones.data || []).map((c) => ({
+        id: `cancel-${c.id_asignacion}`,
+        tipo: 'Cancelacion',
+        fecha: c.turno?.fecha_inicio || new Date().toISOString(),
+        autor: 'Sistema / Auditoría',
+        comentario: `Canceló participación en turno "${c.turno?.nombre_evento || 'Operativo'}". Motivo: ${c.motivo_cancelacion || 'Sin motivo especificado'}.`
+      }));
+      setCancelacionesTurnos(cancels);
+
+    } catch (err) {
+      console.error('Error cargando datos de turnos/bitácora:', err);
+    } finally {
+      setCargandoTurnos(false);
+    }
+  }, [alumno?.id_alumno, mesActivo]);
+
+  useEffect(() => {
+    cargarDatos();
+  }, [cargarDatos]);
+
+  // Unificación de la bitácora
+  const bitacoraUnificada = useMemo(() => {
+    const lista = [...notasManuales, ...cancelacionesTurnos];
+    lista.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+    return lista;
+  }, [notasManuales, cancelacionesTurnos]);
+
+  // 2. Guardar datos del estudiante en Supabase
+  const handleGuardarDatos = async () => {
+    if (!alumno?.id_alumno) return { success: false, error: 'Alumno no válido' };
+
+    try {
+      setGuardando(true);
+      const payload = {
+        rut: form.rut?.trim(),
+        telefono: form.telefono?.trim(),
+        correo: form.correo?.trim(),
+        carrera: form.carrera?.trim(),
+        jornada: form.jornada === 'Vespertina' ? 'Vespertino' : 'Diurno'
+      };
 
       const { data, error } = await supabase
         .from('alumno')
-        .update({ bitacora: nuevoArreglo })
+        .update(payload)
         .eq('id_alumno', alumno.id_alumno)
         .select()
         .single();
 
       if (error) throw error;
 
-      setBitacoraNotas(nuevoArreglo);
-
-      if (onActualizado) {
-        onActualizado({
-          ...alumno,
-          bitacora: nuevoArreglo,
-          horas_validadas: totalHorasCalculadas,
-        });
-      }
-    } catch (err) {
-      console.error('Error al eliminar comentario de la bitácora:', err);
-      alert('Error al eliminar la nota de Supabase.');
-    } finally {
-      setGuardandoNota(false);
-    }
-  };
-
-  // Guardar cambios en datos estáticos
-  const handleGuardarCambios = async (e) => {
-    e?.preventDefault();
-    if (!alumno) return;
-
-    try {
-      setGuardando(true);
-      const payload = {
-        rut: form.rut.trim(),
-        jornada: form.jornada === 'Vespertina' ? 'Vespertino' : 'Diurno',
-        correo: form.correo.trim(),
-      };
-      if (form.telefono) payload.telefono = form.telefono.trim();
-
-      const alumnoActualizado = await updateAlumno(alumno.id_alumno, payload);
-      alumnoActualizado.horas_validadas = totalHorasCalculadas;
-
-      if (onActualizado) {
-        onActualizado({
-          ...alumno,
-          ...alumnoActualizado,
-          bitacora: bitacoraNotas,
-        });
-      }
-
       setModoEdicion(false);
-      dispararToastExito();
+      if (onActualizado) onActualizado(data);
+      return { success: true };
     } catch (err) {
-      console.error('Error al guardar datos del alumno:', err);
-      alert('Error al guardar los datos en Supabase.');
+      console.error('Error al actualizar alumno:', err);
+      return { success: false, error: err.message };
     } finally {
       setGuardando(false);
     }
   };
 
+  // 3. Agregar nota a la bitácora
+  const handleAgregarNota = async () => {
+    if (!nuevaNota.trim() || !alumno?.id_alumno) return { success: false };
+
+    try {
+      setGuardandoNota(true);
+      const nuevaEntrada = {
+        id: `nota-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        fecha: new Date().toISOString(),
+        comentario: nuevaNota.trim(),
+        tipo: 'Observacion'
+      };
+
+      const previas = Array.isArray(notasManuales) ? notasManuales : [];
+      const actualizadas = [nuevaEntrada, ...previas];
+
+      const { error } = await supabase
+        .from('alumno')
+        .update({ bitacora: actualizadas })
+        .eq('id_alumno', alumno.id_alumno);
+
+      if (error) throw error;
+
+      setNotasManuales(actualizadas);
+      setNuevaNota('');
+      if (onActualizado) onActualizado({ ...alumno, bitacora: actualizadas });
+      return { success: true };
+    } catch (err) {
+      console.error('Error al registrar nota en bitácora:', err);
+      return { success: false, error: err.message };
+    } finally {
+      setGuardandoNota(false);
+    }
+  };
+
+  // 4. Eliminar nota manual de la bitácora
+  const handleEliminarNota = async (idNota) => {
+    if (!idNota || !alumno?.id_alumno) return { success: false };
+
+    try {
+      const filtradas = notasManuales.filter((n) => n.id !== idNota);
+
+      const { error } = await supabase
+        .from('alumno')
+        .update({ bitacora: filtradas })
+        .eq('id_alumno', alumno.id_alumno);
+
+      if (error) throw error;
+
+      setNotasManuales(filtradas);
+      if (onActualizado) onActualizado({ ...alumno, bitacora: filtradas });
+      return { success: true };
+    } catch (err) {
+      console.error('Error al eliminar nota de bitácora:', err);
+      return { success: false, error: err.message };
+    }
+  };
+
   return {
-    form,
-    setForm,
     modoEdicion,
     setModoEdicion,
     guardando,
     guardandoNota,
+    cargandoTurnos,
     nuevaNota,
     setNuevaNota,
-    mensajeExito,
-    toastEnPausa,
-    pausarTemporizadorToast,
-    reanudarTemporizadorToast,
+    form,
     turnosHistorial,
-    cargandoTurnos,
-    totalHorasFormato,
-    bitacoraNotas,
-    handleAgregarComentario,
-    handleEliminarComentario,
-    handleGuardarCambios,
+    bitacoraNotas: bitacoraUnificada,
+    handleInputChange,
+    handleGuardarDatos,
+    handleAgregarNota,
+    handleEliminarNota
   };
 }

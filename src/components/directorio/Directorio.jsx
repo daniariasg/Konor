@@ -1,58 +1,45 @@
 import React, { useState } from 'react';
 import TablaDirectorio from './components/TablaDirectorio.jsx';
 import PerfilAlumnoView from './views/PerfilAlumnoView.jsx';
-import ModalRegistroManual from './components/ModalRegistroManual.jsx';
 
 export default function Directorio() {
-  const [vista, setVista] = useState('lista'); // 'lista' | 'perfil'
+  const [vista, setVista] = useState('directorio'); // 'directorio' | 'perfil'
   const [alumnoSeleccionado, setAlumnoSeleccionado] = useState(null);
-  const [mesActivo, setMesActivo] = useState(new Date().getMonth() + 1);
-  const [nombreMesActivo, setNombreMesActivo] = useState('este mes');
-  const [modalManualAbierto, setModalManualAbierto] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [mesActivo, setMesActivo] = useState(new Date().getMonth());
+  const [nombreMesActivo, setNombreMesActivo] = useState('');
 
   const handleSeleccionarAlumno = (alumno, mesNum, nombreMes) => {
     setAlumnoSeleccionado(alumno);
-    setMesActivo(mesNum || (new Date().getMonth() + 1));
+    setMesActivo(typeof mesNum === 'number' ? mesNum : new Date().getMonth());
     setNombreMesActivo(nombreMes || 'este mes');
     setVista('perfil');
   };
 
-  const handleVolverALista = () => {
-    setVista('lista');
+  const handleVolver = () => {
+    setVista('directorio');
     setAlumnoSeleccionado(null);
   };
 
-  if (vista === 'perfil' && alumnoSeleccionado) {
-    return (
-      <PerfilAlumnoView
-        alumno={alumnoSeleccionado}
-        mesActivo={mesActivo}
-        nombreMesActivo={nombreMesActivo}
-        onVolver={handleVolverALista}
-        onActualizado={(alumnoActualizado) => {
-          setAlumnoSeleccionado(alumnoActualizado);
-          setRefreshTrigger((prev) => prev + 1);
-        }}
-      />
-    );
-  }
+  const handleAlumnoActualizado = (alumnoActualizado) => {
+    setAlumnoSeleccionado((prev) => ({
+      ...prev,
+      ...alumnoActualizado
+    }));
+  };
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', minWidth: 0 }}>
-      <TablaDirectorio
-        refreshTrigger={refreshTrigger}
-        onSeleccionarAlumno={handleSeleccionarAlumno}
-        onAbrirRegistroManual={() => setModalManualAbierto(true)}
-      />
-
-      <ModalRegistroManual
-        isOpen={modalManualAbierto}
-        onClose={() => setModalManualAbierto(false)}
-        onSuccess={() => {
-          setRefreshTrigger((prev) => prev + 1);
-        }}
-      />
+    <div className="konor-directorio-container">
+      {vista === 'directorio' ? (
+        <TablaDirectorio onSeleccionarAlumno={handleSeleccionarAlumno} />
+      ) : (
+        <PerfilAlumnoView
+          alumno={alumnoSeleccionado}
+          mesActivo={mesActivo}
+          nombreMesActivo={nombreMesActivo}
+          onVolver={handleVolver}
+          onActualizado={handleAlumnoActualizado}
+        />
+      )}
     </div>
   );
 }

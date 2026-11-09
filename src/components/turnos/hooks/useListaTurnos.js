@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchTurnos, cancelarTurno, duplicarTurno } from '../../../services/turnosService.js';
+import { fetchTurnos, cancelarTurno } from '../../../services/turnosService.js';
+
 
 export function useListaTurnos() {
   const [turnos, setTurnos] = useState([]);
@@ -35,22 +36,11 @@ export function useListaTurnos() {
     }
   };
 
-  const handleDuplicar = async (idTurno, nuevaFechaInicio, nuevaFechaTermino) => {
-    try {
-      const { error: err } = await duplicarTurno(idTurno, nuevaFechaInicio, nuevaFechaTermino);
-      if (err) throw new Error(err);
-      await cargarTurnos();
-    } catch (err) {
-      alert(`Error al duplicar turno: ${err.message}`);
-    }
-  };
-
   return {
     turnos,
     loading,
     error,
     recargarTurnos: cargarTurnos,
     cancelarTurno: handleCancelar,
-    duplicarTurno: handleDuplicar,
   };
 }

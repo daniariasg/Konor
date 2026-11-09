@@ -1,0 +1,176 @@
+/* ==========================================================================
+   ADAPTACIÓN DE DISEÑO: LISTA OFICIAL DE ASISTENCIA (ESTILO KONOR)
+   ========================================================================== */
+
+/* Contenedor principal de la tarjeta de asistencia */
+.konor-asistencia-card {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  margin-top: 16px !important;
+}
+
+/* Cabecera de la lista */
+.konor-asistencia-header {
+  padding: 16px 24px !important;
+  background-color: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.konor-asistencia-heading h2 {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  margin: 0 !important;
+}
+
+.konor-asistencia-desc {
+  font-size: 12px !important;
+  color: #64748b !important;
+  margin-top: 2px !important;
+}
+
+/* Tabla de asistencia */
+.konor-asistencia-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+.konor-asistencia-table th {
+  background-color: #ffffff !important;
+  padding: 14px 24px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-transform: none !important;
+  color: #334155 !important;
+  letter-spacing: normal !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.konor-asistencia-table td {
+  padding: 13px 24px !important;
+  font-size: 13px !important;
+  color: #1e293b !important;
+  font-weight: 600 !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  vertical-align: middle !important;
+}
+
+/* Alineaciones de columnas */
+.konor-asistencia-table th:last-child,
+.konor-asistencia-table td:last-child {
+  text-align: right !important;
+}
+
+/* Datos del alumno y RUT */
+.td-nombre, 
+tbody td:nth-child(2) {
+  font-weight: 600 !important;
+  color: #1e293b !important;
+}
+
+.td-rut,
+tbody td:nth-child(3) {
+  font-family: monospace !important;
+  color: #64748b !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+}
+
+/* Campos de hora (Inputs tipo time limpios) */
+.konor-time-field,
+input[type="time"] {
+  padding: 5px 8px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  font-family: 'Courier New', Courier, monospace !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+}
+
+input[type="time"]:focus {
+  border-color: #43b0c4 !important;
+  box-shadow: 0 0 0 2px rgba(67, 176, 196, 0.15) !important;
+}
+
+input[type="time"]:disabled {
+  background-color: #f1f5f9 !important;
+  color: #94a3b8 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Celda de horas reales */
+.horas-badge,
+td:last-child {
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  color: #06113C !important;
+}
+
+/* Pie de página de la tarjeta de asistencia */
+.konor-asistencia-footer {
+  padding: 16px 24px !important;
+  background-color: #ffffff !important;
+  border-top: 1px solid #e2e8f0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 12px !important;
+  text-align: center !important;
+}
+
+.konor-aviso-inmutable {
+  font-size: 13px !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
+}
+
+/* Botón interno de sellado / cerrar turno (oscuro con icono de candado) */
+.konor-btn-sellar {
+  background-color: #06113C !important;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 10px 24px !important;
+  border: none !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  transition: opacity 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(6, 17, 60, 0.15) !important;
+}
+
+.konor-btn-sellar:hover:not(:disabled) {
+  opacity: 0.9 !important;
+}
+
+.konor-btn-sellar:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+/* Banner de lista cerrada */
+.banner-lista-cerrada {
+  background-color: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  color: #166534 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  padding: 14px 20px !important;
+  border-radius: 10px !important;
+}

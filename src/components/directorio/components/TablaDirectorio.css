@@ -1,410 +1,509 @@
-/* ==========================================================================
-   Contenedor Principal del Directorio (Fondo suave unificado #f8fafc)
-   ========================================================================== */
-.directorio-layout {
+/* Contenedor general homologado */
+.konor-directorio-view {
   width: 100%;
-  padding: 2.25rem 3rem;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  background-color: #f8fafc;
-  min-height: 100%;
+  gap: 20px;
 }
 
-/* ==========================================================================
-   Encabezado del Directorio con Línea Divisoria Fina
-   ========================================================================== */
-.directorio-top-header {
+/* Cabecera idéntica a Turnos y Eventos */
+.konor-directorio-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 1.25rem;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid #cbd5e1;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
-.directorio-page-title {
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: #0f172a;
+.konor-directorio-title {
   margin: 0;
-  letter-spacing: -0.025em;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #06113c;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
-/* ==========================================================================
-   Barra de Herramientas
-   ========================================================================== */
-.directorio-toolbar {
+.konor-directorio-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+/* Barra de acciones unificada en una sola fila */
+.konor-directorio-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.toolbar-left-group {
+.konor-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 12px;
   flex: 1;
-  max-width: 480px;
+  min-width: 280px;
 }
 
-.figma-search-box {
+.konor-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Buscador compacto */
+.konor-search-directorio-wrapper {
   position: relative;
-  flex: 1;
-  display: flex;
-  align-items: center;
-}
-
-.figma-search-input {
+  max-width: 320px;
   width: 100%;
-  height: 40px;
-  padding: 0 1rem 0 2.5rem;
-  font-size: 0.8125rem;
-  color: #0f172a;
-  background-color: #ffffff;
-  border: 1px solid #94a3b8;
-  border-radius: 9999px;
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.figma-search-input:focus {
-  border-color: #43b0c4;
-  box-shadow: 0 0 0 3px rgba(67, 176, 196, 0.2);
-}
-
-.figma-search-icon {
+.konor-search-icon {
   position: absolute;
-  left: 0.875rem;
-  color: #64748b;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
   pointer-events: none;
 }
 
-/* Selector de Mes con Popover */
-.calendar-picker-wrapper {
+.konor-search-directorio-input {
+  width: 100%;
+  padding: 10px 12px 10px 38px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  outline: none;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  transition: all 0.15s ease;
+}
+
+.konor-search-directorio-input:focus {
+  border-color: #43b0c4;
+  box-shadow: 0 0 0 2px rgba(67, 176, 196, 0.2);
+}
+
+/* ==========================================================================
+   POPOVER TIPO CALENDARIO (MES Y AÑO)
+   ========================================================================== */
+.konor-mes-selector-container {
   position: relative;
 }
 
-.btn-icon-calendar {
-  width: 40px;
-  height: 40px;
-  border: 1px solid #94a3b8;
-  border-radius: 8px;
-  background-color: #ffffff;
-  color: #06113c;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-icon-calendar:hover,
-.btn-icon-calendar.active {
-  background-color: #f1f5f9;
-  border-color: #43b0c4;
-  color: #43b0c4;
-}
-
-.month-dropdown-menu {
-  position: absolute;
-  top: 48px;
-  left: 0;
-  z-index: 50;
-  width: 220px;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
-  padding: 0.5rem;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.25rem;
-  animation: popoverFadeIn 0.15s ease-out;
-}
-
-@keyframes popoverFadeIn {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.month-option-btn {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-align: left;
-  border: none;
-  background: transparent;
-  color: #334155;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.12s ease;
-}
-
-.month-option-btn:hover {
-  background-color: #f1f5f9;
-  color: #06113c;
-}
-
-.month-option-btn.selected {
-  background-color: #e0f2fe;
-  color: #0284c7;
-  font-weight: 700;
-}
-
-.toolbar-right-group {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.btn-icon-export {
-  width: 40px;
-  height: 40px;
-  border: 1px solid #94a3b8;
-  border-radius: 8px;
-  background-color: #ffffff;
-  color: #06113c;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-icon-export:hover {
-  background-color: #f8fafc;
-  border-color: #43b0c4;
-  color: #43b0c4;
-}
-
-.btn-figma-add {
-  height: 40px;
-  padding: 0 1.25rem;
-  background-color: #55a339;
-  color: #ffffff;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: background-color 0.15s ease;
-}
-
-.btn-figma-add:hover {
-  background-color: #468c2d;
-}
-
-/* ==========================================================================
-   Tabla de Alumnos (Layout Fijo e Inmutable)
-   ========================================================================== */
-.figma-table-container {
-  width: 100%;
-  border-radius: 12px;
-  border: 1px solid #cbd5e1;
-  background-color: #ffffff;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-}
-
-.figma-table {
-  width: 100%;
-  table-layout: fixed; /* Previene cambios de ancho dinámicos al ordenar */
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.8125rem;
-}
-
-.figma-table thead tr {
-  border-bottom: 2px solid #cbd5e1;
-  background-color: #f8fafc;
-}
-
-.figma-table th {
-  padding: 1rem 1.25rem;
-  color: #0f172a;
-  font-weight: 700;
-  font-size: 0.8125rem;
-  user-select: none;
-  box-sizing: border-box;
-}
-
-.figma-table th.th-interactive {
-  cursor: pointer;
-}
-
-.figma-table th.th-interactive:hover {
-  color: #43b0c4;
-}
-
-.th-header-inner {
+.konor-mes-trigger-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 9px 14px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #06113c;
+  cursor: pointer;
+  transition: all 0.15s ease;
   white-space: nowrap;
 }
 
-/* ==========================================================================
-   Indicadores de Ordenamiento: Ancho Fijo de 12px
-   ========================================================================== */
-.sort-triangle {
-  font-size: 0.65rem;
-  line-height: 1;
-  display: inline-block;
-  width: 12px; /* Ancho rígido para neutralizar saltos visuales entre glifos */
-  text-align: center;
-  user-select: none;
-  transition: color 0.15s ease;
+.konor-mes-trigger-btn:hover {
+  border-color: #43b0c4;
 }
 
-.sort-triangle-neutral {
-  color: #94a3b8;
-  opacity: 0.75;
-  letter-spacing: -1px;
-}
-
-.sort-triangle-active {
-  color: #43b0c4;
-  font-weight: 800;
-}
-
-.figma-table tbody tr {
-  border-bottom: 1px solid #cbd5e1;
-  transition: background-color 0.12s ease;
-  cursor: pointer;
-}
-
-.figma-table tbody tr:last-child {
-  border-bottom: none;
-}
-
-.figma-table tbody tr:hover {
-  background-color: #f8fafc;
-}
-
-.figma-table td {
-  padding: 1.125rem 1.25rem;
-  color: #334155;
+.konor-calendar-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 250px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+  z-index: 1000;
   box-sizing: border-box;
 }
 
-.td-rut {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #334155;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-.td-nombre {
-  font-weight: 600;
-  color: #0f172a;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.td-horas {
-  font-weight: 500;
-  color: #334155;
-  white-space: nowrap;
-}
-
-.td-monto {
-  font-weight: 600;
-  color: #0f172a;
-  white-space: nowrap;
-}
-
-.td-acciones {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: 1.5rem;
-}
-
-.action-arrow {
-  color: #94a3b8;
-  transition: transform 0.15s ease, color 0.15s ease;
-}
-
-.figma-table tbody tr:hover .action-arrow {
-  color: #43b0c4;
-  transform: translateX(4px);
-}
-
-.table-empty-message {
-  padding: 3rem;
-  text-align: center;
-  color: #94a3b8;
-  font-size: 0.8125rem;
-}
-
-/* ==========================================================================
-   Controles de Paginación
-   ========================================================================== */
-.table-pagination-footer {
-  padding: 0.875rem 1.5rem;
-  border-top: 1px solid #cbd5e1;
-  background-color: #f8fafc;
+.calendar-popover-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 14px;
 }
 
-.pagination-label {
-  font-size: 0.75rem;
+.calendar-nav-arrow {
+  background: none;
+  border: none;
+  cursor: pointer;
   color: #64748b;
-  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  transition: background-color 0.15s ease;
 }
 
-.pagination-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.calendar-nav-arrow:hover {
+  background-color: #f1f5f9;
+  color: #06113c;
 }
 
-.btn-page-nav {
+.calendar-current-year {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #06113c;
+}
+
+.calendar-months-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.calendar-month-cell {
+  background: none;
+  border: none;
+  padding: 10px 4px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.calendar-month-cell:hover {
+  background-color: #f1f5f9;
+  color: #06113c;
+}
+
+.calendar-month-cell.is-selected {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+/* ==========================================================================
+   BOTONES Y TABLA
+   ========================================================================== */
+.konor-btn-primary {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.375rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: 6px;
+  gap: 8px;
+  background-color: #43b0c4;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  white-space: nowrap;
+}
+
+.konor-btn-primary:hover {
+  background-color: #389aa9;
+}
+
+.konor-btn-exportar-excel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   background-color: #ffffff;
+  color: #06113c;
+  border: 1px solid #cbd5e1;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.konor-btn-exportar-excel:hover {
+  background-color: #f8fafc;
+  border-color: #43b0c4;
+}
+
+.konor-directorio-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+}
+
+.konor-directorio-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.table-responsive-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabla-oficial-konor {
+  width: 100%;
+  table-layout: auto;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.tabla-oficial-konor thead {
+  background-color: #f8fafc;
+}
+
+.tabla-oficial-konor th {
+  padding: 14px 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+  letter-spacing: 0.05em;
+  user-select: none;
+}
+
+.th-sortable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.th-sortable:hover {
+  background-color: #f1f5f9;
+  color: #06113c;
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.th-left,
+.td-left {
+  text-align: left !important;
+}
+
+.col-nombre-th,
+.col-nombre-td {
+  text-align: left !important;
+}
+
+.th-content-left {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  gap: 6px;
+}
+
+.alumno-nombre-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.alumno-nombre-txt {
+  font-weight: 400 !important;
+  color: #334155 !important;
+  text-decoration: none !important;
+}
+
+.alumno-carrera-sub {
+  font-size: 0.75rem !important;
+  color: #64748b !important;
+  font-weight: 400 !important;
+  line-height: 1.1;
+}
+
+.fila-alumno:hover .alumno-nombre-txt {
+  color: #334155 !important;
+}
+
+.th-center-content {
+  justify-content: center;
+}
+
+.th-right-content {
+  justify-content: flex-end;
+}
+
+.sort-icon-inactive {
+  color: #94a3b8;
+  opacity: 0.6;
+}
+
+.sort-icon-active {
+  color: #43b0c4;
+}
+
+.tabla-oficial-konor td {
+  padding: 14px 20px;
+  font-size: 0.875rem;
+  color: #0f172a;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.fila-alumno {
+  transition: background-color 0.15s ease;
+}
+
+.fila-alumno:hover {
+  background-color: #f8fafc;
+}
+
+.hours-col {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.th-center {
+  text-align: center;
+}
+
+.th-right {
+  text-align: right;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.konor-btn-row-action {
+  background: transparent;
+  border: none;
+  color: #43b0c4;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, color 0.15s ease;
+  margin: 0 auto;
+}
+
+.fila-alumno:hover .konor-btn-row-action {
+  transform: translateX(3px);
+  color: #06113c;
+}
+
+.konor-directorio-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 12px;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.empty-table-row td {
+  padding: 48px 20px !important;
+  text-align: center !important;
+  color: #64748b !important;
+  background-color: #ffffff;
+}
+
+.empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.empty-icon {
+  color: #cbd5e1;
+}
+
+.empty-content p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  max-width: 480px;
+  line-height: 1.5;
+}
+
+.konor-directorio-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-top: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pagination-info {
+  font-size: 0.825rem;
+  color: #64748b;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
   color: #334155;
-  border: 1px solid #94a3b8;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.btn-page-nav:hover:not(:disabled) {
-  border-color: #43b0c4;
-  color: #06113c;
+.btn-pagination:hover:not(:disabled) {
   background-color: #f1f5f9;
+  border-color: #94a3b8;
+  color: #06113c;
 }
 
-.btn-page-nav:disabled {
-  opacity: 0.45;
+.btn-pagination:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
-  border-color: #cbd5e1;
 }
 
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
+.pagination-page-current {
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: #06113c;
+}
+
+.konor-spin-icon {
+  animation: konor-spin 0.8s linear infinite;
+}
+
+@keyframes konor-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

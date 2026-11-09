@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Environment variables & secrets (CRÍTICO)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+serviceAccountKey.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,9 +30,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-node_modules/
-dist/
-.env
-.env.local
-.DS_Store

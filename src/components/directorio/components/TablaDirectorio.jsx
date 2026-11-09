@@ -1,302 +1,391 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useTablaDirectorio } from '../hooks/useTablaDirectorio.js';
+import ModalRegistroManual from './ModalRegistroManual.jsx';
 import { 
   Search, 
+  FileSpreadsheet, 
+  Plus, 
   Calendar, 
-  FileDown, 
-  ArrowRight, 
-  Loader2, 
+  ChevronRight, 
   ChevronLeft, 
-  ChevronRight 
+  ChevronDown,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  AlertCircle 
 } from 'lucide-react';
-import { useTablaDirectorio, MESES } from '../hooks/useTablaDirectorio.js';
 import './TablaDirectorio.css';
 
-export default function TablaDirectorio({ 
-  onSeleccionarAlumno, 
-  onAbrirRegistroManual, 
-  refreshTrigger 
-}) {
+const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+export default function TablaDirectorio({ onSeleccionarAlumno }) {
   const {
+    loading,
+    errorMsg,
+    nombreMesActual,
+    terminoBusqueda,
+    setTerminoBusqueda,
+    mesSeleccionado,
+    setMesSeleccionado,
+    anioSeleccionado,
+    setAnioSeleccionado,
     alumnosPaginados,
-    totalPaginas,
+    alumnosOrdenados,
     paginaActual,
     setPaginaActual,
-    totalAlumnos,
+    totalPaginas,
     indiceInicio,
-    FILAS_POR_PAGINA,
-    loading,
-    busqueda,
-    setBusqueda,
-    mesActivo,
-    nombreMesActivo,
-    cambiarMes,
-    menuMesAbierto,
-    setMenuMesAbierto,
-    calendarRef,
-    sortConfig,
-    ordenarPor,
-    valorHoraTarifa,
-    exportarExcel,
-  } = useTablaDirectorio(refreshTrigger);
+    elementosPorPagina,
+    columnaOrden,
+    direccionOrden,
+    handleOrdenar,
+    modalRegistroOpen,
+    setModalRegistroOpen,
+    handleAlumnoCreado,
+    handleExportarExcel
+  } = useTablaDirectorio();
 
-  // Renderiza el indicador de ordenamiento como un triángulo discreto
-  const renderSortIndicator = (columnaKey) => {
-    const estaActiva = sortConfig?.key === columnaKey;
+  const [popoverMesAbierto, setPopoverMesAbierto] = useState(false);
+  const [anioVisual, setAnioVisual] = useState(() => anioSeleccionado || new Date().getFullYear());
+  const popoverRef = useRef(null);
 
-    if (!estaActiva) {
-      return (
-        <span className="sort-triangle sort-triangle-neutral" aria-hidden="true">
-          ▴▾
-        </span>
-      );
+  useEffect(() => {
+    const handleClickFuera = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        setPopoverMesAbierto(false);
+      }
+    };
+    if (popoverMesAbierto) {
+      document.addEventListener('mousedown', handleClickFuera);
     }
+    return () => document.removeEventListener('mousedown', handleClickFuera);
+  }, [popoverMesAbierto]);
 
-    return (
-      <span className="sort-triangle sort-triangle-active" aria-hidden="true">
-        {sortConfig.direction === 'asc' ? '▲' : '▼'}
-      </span>
-    );
+  const anioActivo = anioSeleccionado || anioVisual;
+
+  const handleSeleccionarMes = (indiceMes) => {
+    setMesSeleccionado(indiceMes);
+    if (typeof setAnioSeleccionado === 'function') {
+      setAnioSeleccionado(anioVisual);
+    }
+    setPopoverMesAbierto(false);
+  };
+
+  const renderSortIcon = (columna) => {
+    if (columnaOrden !== columna) {
+      return <ArrowUpDown size={14} className="sort-icon-inactive" />;
+    }
+    return direccionOrden === 'asc' 
+      ? <ArrowUp size={14} className="sort-icon-active" /> 
+      : <ArrowDown size={14} className="sort-icon-active" />;
   };
 
   return (
-    <div className="directorio-layout">
-      {/* 1. Header con mes dinámico */}
-      <div className="directorio-top-header">
-        <h1 className="directorio-page-title">
-          Alumnos ayudantes: {nombreMesActivo}
-        </h1>
+    <div className="konor-directorio-view">
+      <div className="konor-directorio-header">
+        <div>
+          <h1 className="konor-directorio-title">
+            Alumnos ayudantes: {nombreMesActual} {anioActivo}
+          </h1>
+          <p className="konor-directorio-subtitle">
+            Directorio general de ayudantes, saldo contable y asignación mensual
+          </p>
+        </div>
       </div>
 
-      {/* 2. Barra de acciones y buscador limpio */}
-      <div className="directorio-toolbar">
-        <div className="toolbar-left-group">
-          <div className="figma-search-box">
-            <label htmlFor="tabla-search-input" className="sr-only">
-              Buscar alumno ayudante
-            </label>
-            <Search className="w-4 h-4 figma-search-icon" aria-hidden="true" />
+      <div className="konor-directorio-toolbar">
+        <div className="konor-toolbar-left">
+          <div className="konor-search-directorio-wrapper">
+            <Search size={16} className="konor-search-icon" />
             <input
-              id="tabla-search-input"
-              name="busquedaAlumnos"
               type="text"
-              placeholder="Buscar por nombre o RUT..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              autoComplete="off"
-              className="figma-search-input"
+              placeholder="Buscar por Nombre o RUT..."
+              value={terminoBusqueda}
+              onChange={(e) => setTerminoBusqueda(e.target.value)}
+              className="konor-search-directorio-input"
             />
           </div>
 
-          {/* Selector de Mes (Popover) */}
-          <div className="calendar-picker-wrapper" ref={calendarRef}>
+          <div className="konor-mes-selector-container" ref={popoverRef}>
             <button
               type="button"
-              onClick={() => setMenuMesAbierto(!menuMesAbierto)}
-              title="Cambiar mes del periodo"
-              className={`btn-icon-calendar ${menuMesAbierto ? 'active' : ''}`}
-              aria-label="Seleccionar mes del periodo"
-              aria-expanded={menuMesAbierto}
+              onClick={() => setPopoverMesAbierto((prev) => !prev)}
+              className="konor-mes-trigger-btn"
             >
-              <Calendar className="w-4 h-4" aria-hidden="true" />
+              <Calendar size={16} className="text-[#43b0c4]" />
+              <span>{nombreMesActual} {anioActivo}</span>
+              <ChevronDown size={14} className="text-slate-500" />
             </button>
 
-            {menuMesAbierto && (
-              <div className="month-dropdown-menu" role="menu">
-                {MESES.map((mes, idx) => {
-                  const numeroMes = idx + 1;
-                  const esSeleccionado = mesActivo === numeroMes;
-                  return (
-                    <button
-                      key={mes}
-                      type="button"
-                      role="menuitem"
-                      onClick={() => cambiarMes(numeroMes)}
-                      className={`month-option-btn ${esSeleccionado ? 'selected' : ''}`}
-                    >
-                      {mes}
-                    </button>
-                  );
-                })}
+            {popoverMesAbierto && (
+              <div className="konor-calendar-popover">
+                <div className="calendar-popover-header">
+                  <button
+                    type="button"
+                    onClick={() => setAnioVisual((a) => a - 1)}
+                    className="calendar-nav-arrow"
+                    title="Año anterior"
+                  >
+                    &lt;
+                  </button>
+                  <span className="calendar-current-year">{anioVisual}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAnioVisual((a) => a + 1)}
+                    className="calendar-nav-arrow"
+                    title="Año siguiente"
+                  >
+                    &gt;
+                  </button>
+                </div>
+
+                <div className="calendar-months-grid">
+                  {MESES_CORTOS.map((mesNombre, idx) => {
+                    const isSelected = mesSeleccionado === idx && anioActivo === anioVisual;
+                    return (
+                      <button
+                        key={mesNombre}
+                        type="button"
+                        onClick={() => handleSeleccionarMes(idx)}
+                        className={`calendar-month-cell ${isSelected ? 'is-selected' : ''}`}
+                      >
+                        {mesNombre}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        <div className="toolbar-right-group">
-          {/* Botón Exportar Nómina a Excel */}
+        <div className="konor-toolbar-right">
           <button
             type="button"
-            onClick={exportarExcel}
-            title="Descargar nómina del mes en Excel"
-            className="btn-icon-export"
-            aria-label="Exportar nómina a Excel"
+            onClick={handleExportarExcel}
+            className="konor-btn-exportar-excel"
+            title="Exportar nómina visible a Excel (.xlsx)"
           >
-            <FileDown className="w-4 h-4" aria-hidden="true" />
+            <FileSpreadsheet size={16} />
+            <span>Exportar Excel</span>
           </button>
 
-          {/* Botón + Agregar alumno */}
           <button
             type="button"
-            onClick={onAbrirRegistroManual}
-            className="btn-figma-add"
+            onClick={() => setModalRegistroOpen(true)}
+            className="konor-btn-primary"
           >
-            + Agregar alumno
+            <Plus size={16} />
+            <span>Agregar alumno</span>
           </button>
         </div>
       </div>
 
-      {/* 3. Tabla con columna RUT y ordenamiento */}
-      <div className="figma-table-container">
-        <table className="figma-table">
-          <thead>
-            <tr>
-              <th 
-                onClick={() => ordenarPor('rut')} 
-                className="th-interactive" 
-                style={{ width: '135px' }}
-                scope="col"
-              >
-                <div className="th-header-inner">
-                  <span>RUT</span>
-                  {renderSortIndicator('rut')}
-                </div>
-              </th>
-              <th 
-                onClick={() => ordenarPor('nombre')} 
-                className="th-interactive"
-                scope="col"
-              >
-                <div className="th-header-inner">
-                  <span>Nombre alumno</span>
-                  {renderSortIndicator('nombre')}
-                </div>
-              </th>
-              <th 
-                onClick={() => ordenarPor('horas_validadas')} 
-                className="th-interactive"
-                scope="col"
-              >
-                <div className="th-header-inner">
-                  <span>Horas Total</span>
-                  {renderSortIndicator('horas_validadas')}
-                </div>
-              </th>
-              <th 
-                onClick={() => ordenarPor('horas_validadas')} 
-                className="th-interactive"
-                scope="col"
-              >
-                <div className="th-header-inner">
-                  <span>Monto ($)</span>
-                  {renderSortIndicator('horas_validadas')}
-                </div>
-              </th>
-              <th scope="col" style={{ textAlign: 'right', paddingRight: '2rem' }}>
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="5" className="table-empty-message">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#43b0c4] mx-auto mb-2" aria-hidden="true" />
-                  Calculando registros de {nombreMesActivo}...
-                </td>
-              </tr>
-            ) : alumnosPaginados.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="table-empty-message">
-                  {busqueda
-                    ? `No se encontraron resultados para "${busqueda}".`
-                    : 'No hay alumnos registrados para este periodo.'}
-                </td>
-              </tr>
-            ) : (
-              alumnosPaginados.map((alumno) => {
-                const horas = parseFloat(alumno.horas_validadas || 0);
-                const monto = Math.round(horas * valorHoraTarifa);
-                const horasFormato = horas % 1 === 0 
-                  ? horas.toString() 
-                  : horas.toFixed(1).replace('.', ',');
+      {errorMsg && (
+        <div className="konor-directorio-alert">
+          <AlertCircle size={18} />
+          <span>{errorMsg}</span>
+        </div>
+      )}
 
-                return (
-                  <tr
-                    key={alumno.id_alumno}
-                    onClick={() => onSeleccionarAlumno(alumno, mesActivo, nombreMesActivo)}
-                    title="Haz clic para ver el perfil completo"
-                  >
-                    {/* Celda RUT en formato monoespaciado alineado */}
-                    <td 
-                      className="td-rut"
-                      style={{
-                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                        color: '#334155',
-                        fontWeight: 600,
-                        letterSpacing: '0.02em',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      {alumno.rut}
+      <div className="konor-directorio-card">
+        {loading ? (
+          <div className="table-responsive-wrapper animate-pulse">
+            <table className="tabla-oficial-konor">
+              <thead>
+                <tr>
+                  <th style={{ width: '22%' }} className="th-left"><div className="konor-skeleton-block" style={{ width: '50px', height: '14px' }} /></th>
+                  <th style={{ width: '38%' }}><div className="konor-skeleton-block" style={{ width: '130px', height: '14px' }} /></th>
+                  <th style={{ width: '18%' }} className="th-center"><div className="konor-skeleton-block" style={{ width: '85px', height: '14px', margin: '0 auto' }} /></th>
+                  <th style={{ width: '16%' }} className="th-right"><div className="konor-skeleton-block" style={{ width: '70px', height: '14px', marginLeft: 'auto' }} /></th>
+                  <th style={{ width: '6%' }} className="th-center"><div className="konor-skeleton-block" style={{ width: '35px', height: '14px', margin: '0 auto' }} /></th>
+                </tr>
+              </thead>
+              <tbody>
+                {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                  <tr key={n} style={{ borderTop: '1px solid #f1f5f9' }}>
+                    <td className="td-left">
+                      <div className="konor-skeleton-block" style={{ width: '90px', height: '14px' }} />
                     </td>
-                    <td className="td-nombre">{alumno.nombre}</td>
-                    <td className="td-horas">{horasFormato} hrs</td>
-                    <td className="td-monto">${monto.toLocaleString('es-CL')}</td>
-                    <td className="td-acciones">
-                      <button
-                        type="button"
-                        className="btn-table-arrow-action"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSeleccionarAlumno(alumno, mesActivo, nombreMesActivo);
-                        }}
-                        aria-label={`Ver perfil de ${alumno.nombre}`}
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
-                      >
-                        <ArrowRight className="w-4 h-4 action-arrow" aria-hidden="true" />
-                      </button>
+                    <td className="col-nombre-td">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div className="konor-skeleton-block" style={{ width: '160px', height: '15px' }} />
+                        <div className="konor-skeleton-block" style={{ width: '100px', height: '11px' }} />
+                      </div>
+                    </td>
+                    <td className="th-center">
+                      <div className="konor-skeleton-block" style={{ width: '60px', height: '14px', margin: '0 auto' }} />
+                    </td>
+                    <td className="th-right">
+                      <div className="konor-skeleton-block" style={{ width: '70px', height: '14px', marginLeft: 'auto' }} />
+                    </td>
+                    <td className="th-center">
+                      <div className="konor-skeleton-block" style={{ width: '18px', height: '18px', borderRadius: '4px', margin: '0 auto' }} />
                     </td>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="table-responsive-wrapper">
+            <table className="tabla-oficial-konor">
+              <thead>
+                <tr>
+                  <th 
+                    style={{ width: '22%' }}
+                    onClick={() => handleOrdenar('rut')}
+                    className="th-sortable th-left"
+                  >
+                    <div className="th-content">
+                      <span>RUT</span>
+                      {renderSortIcon('rut')}
+                    </div>
+                  </th>
+                  <th 
+                    style={{ width: '38%' }}
+                    onClick={() => handleOrdenar('nombre')}
+                    className="th-sortable col-nombre-th"
+                  >
+                    <div className="th-content-left">
+                      <span>NOMBRE ALUMNO</span>
+                      {renderSortIcon('nombre')}
+                    </div>
+                  </th>
+                  <th 
+                    style={{ width: '18%' }}
+                    onClick={() => handleOrdenar('horas_total')}
+                    className="th-sortable th-center"
+                  >
+                    <div className="th-content th-center-content">
+                      <span>HORAS TOTAL</span>
+                      {renderSortIcon('horas_total')}
+                    </div>
+                  </th>
+                  <th 
+                    style={{ width: '16%' }}
+                    onClick={() => handleOrdenar('monto_total')}
+                    className="th-sortable th-right"
+                  >
+                    <div className="th-content th-right-content">
+                      <span>MONTO ($)</span>
+                      {renderSortIcon('monto_total')}
+                    </div>
+                  </th>
+                  <th style={{ width: '6%' }} className="th-center">
+                    ACCIONES
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {alumnosPaginados.length === 0 ? (
+                  <tr className="empty-table-row">
+                    <td colSpan={5}>
+                      <div className="empty-content">
+                        <AlertCircle size={36} className="empty-icon" />
+                        <p>No se encontraron alumnos ayudantes registrados con los filtros aplicados.</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  alumnosPaginados.map((al) => (
+                    <tr
+                      key={al.id_alumno}
+                      className="fila-alumno cursor-pointer"
+                      onClick={() => onSeleccionarAlumno && onSeleccionarAlumno(al, mesSeleccionado, nombreMesActual)}
+                    >
+                      <td className="td-left">
+                        <span className="font-mono text-xs text-slate-600" style={{ fontWeight: '400', fontVariantNumeric: 'tabular-nums' }}>
+                          {al.rut || '--'}
+                        </span>
+                      </td>
 
-        {/* 4. Paginación Inferior */}
-        {totalAlumnos > 0 && (
-          <div className="table-pagination-footer">
-            <span className="pagination-label">
-              Mostrando {indiceInicio + 1} - {Math.min(indiceInicio + FILAS_POR_PAGINA, totalAlumnos)} de {totalAlumnos} alumnos
+                      <td className="col-nombre-td">
+                        <div className="alumno-nombre-container">
+                          <span className="alumno-nombre-txt" style={{ color: '#334155', fontWeight: '400' }}>
+                            {al.nombre}
+                          </span>
+                          {al.carrera && (
+                            <span className="alumno-carrera-sub" style={{ color: '#94a3b8', fontSize: '0.72rem', fontWeight: '400', marginTop: '1px' }}>
+                              {al.carrera}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="th-center">
+                        <span className="font-mono hours-col text-slate-600" style={{ fontWeight: '400', fontVariantNumeric: 'tabular-nums' }}>
+                          {(al.horas_total || 0).toFixed(1).replace('.', ',')} hrs
+                        </span>
+                      </td>
+
+                      <td className="th-right">
+                        <span className="font-mono text-slate-600" style={{ fontWeight: '400', fontVariantNumeric: 'tabular-nums' }}>
+                          ${Number(al.monto_total || 0).toLocaleString('es-CL')}
+                        </span>
+                      </td>
+
+                      <td className="th-center">
+                        <button
+                          type="button"
+                          className="konor-btn-row-action"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onSeleccionarAlumno) onSeleccionarAlumno(al, mesSeleccionado, nombreMesActual);
+                          }}
+                          title="Ver perfil del alumno"
+                        >
+                          <ChevronRight size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {!loading && alumnosOrdenados.length > 0 && (
+          <div className="konor-directorio-pagination">
+            <span className="pagination-info">
+              Mostrando {indiceInicio + 1} a {Math.min(indiceInicio + elementosPorPagina, alumnosOrdenados.length)} de {alumnosOrdenados.length} alumnos
             </span>
-            <div className="pagination-actions">
+            <div className="pagination-controls">
               <button
                 type="button"
+                onClick={() => setPaginaActual((p) => Math.max(p - 1, 1))}
                 disabled={paginaActual === 1}
-                onClick={() => setPaginaActual((prev) => Math.max(prev - 1, 1))}
-                className="btn-page-nav"
-                aria-label="Página anterior"
+                className="btn-pagination"
               >
-                <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" /> Anterior
+                <ChevronLeft size={16} />
+                <span>Anterior</span>
               </button>
-
-              <span className="pagination-label" style={{ fontWeight: 600, margin: '0 4px' }}>
-                Página {paginaActual} de {totalPaginas}
+              <span className="pagination-page-current">
+                {paginaActual} / {totalPaginas}
               </span>
-
               <button
                 type="button"
-                disabled={paginaActual >= totalPaginas}
-                onClick={() => setPaginaActual((prev) => Math.min(prev + 1, totalPaginas))}
-                className="btn-page-nav"
-                aria-label="Página siguiente"
+                onClick={() => setPaginaActual((p) => Math.min(p + 1, totalPaginas))}
+                disabled={paginaActual === totalPaginas}
+                className="btn-pagination"
               >
-                Siguiente <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Siguiente</span>
+                <ChevronRight size={16} />
               </button>
             </div>
           </div>
         )}
       </div>
+
+      {modalRegistroOpen && (
+        <ModalRegistroManual
+          isOpen={modalRegistroOpen}
+          onClose={() => setModalRegistroOpen(false)}
+          onCerrar={() => setModalRegistroOpen(false)}
+          onAlumnoCreado={handleAlumnoCreado}
+        />
+      )}
     </div>
   );
 }

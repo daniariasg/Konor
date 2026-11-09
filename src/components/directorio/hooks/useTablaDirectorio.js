@@ -1,162 +1,221 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { supabase } from '../../../config/supabase.js';
 import * as XLSX from 'xlsx';
-import { fetchAlumnosDirectorio } from '../../../services/alumnosService.js';
 
 export const MESES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  { valor: 0, nombre: 'Enero' },
+  { valor: 1, nombre: 'Febrero' },
+  { valor: 2, nombre: 'Marzo' },
+  { valor: 3, nombre: 'Abril' },
+  { valor: 4, nombre: 'Mayo' },
+  { valor: 5, nombre: 'Junio' },
+  { valor: 6, nombre: 'Julio' },
+  { valor: 7, nombre: 'Agosto' },
+  { valor: 8, nombre: 'Septiembre' },
+  { valor: 9, nombre: 'Octubre' },
+  { valor: 10, nombre: 'Noviembre' },
+  { valor: 11, nombre: 'Diciembre' },
 ];
 
-export function useTablaDirectorio(refreshTrigger = 0) {
+export const VALOR_HORA_DEFAULT = 2500;
+export const ELEMENTOS_POR_PAGINA = 10;
+
+export function useTablaDirectorio() {
   const [alumnos, setAlumnos] = useState([]);
+  const [asignacionesMes, setAsignacionesMes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [busqueda, setBusqueda] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: 'id_alumno', direction: 'desc' });
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  // Estados de control
+  const [terminoBusqueda, setTerminoBusqueda] = useState('');
+  const [mesSeleccionado, setMesSeleccionado] = useState(new Date().getMonth());
   const [paginaActual, setPaginaActual] = useState(1);
-  const [menuMesAbierto, setMenuMesAbierto] = useState(false);
-  const calendarRef = useRef(null);
+  const [modalRegistroOpen, setModalRegistroOpen] = useState(false);
 
-  const valorHoraTarifa = 4700;
-  const FILAS_POR_PAGINA = 10;
-  const anioActivo = new Date().getFullYear();
+  // Estado de ordenamiento
+  const [columnaOrden, setColumnaOrden] = useState('nombre');
+  const [direccionOrden, setDireccionOrden] = useState('asc'); // 'asc' | 'desc'
 
-  const [mesActivoNumero, setMesActivoNumero] = useState(() => new Date().getMonth() + 1);
-
-  const nombreMesActivo = useMemo(() => {
-    return MESES[mesActivoNumero - 1] || 'Mes actual';
-  }, [mesActivoNumero]);
-
-  const cargarDatos = useCallback(async () => {
+  // Consulta a Supabase
+  const cargarAlumnosYHoras = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await fetchAlumnosDirectorio(anioActivo, mesActivoNumero);
-      setAlumnos(data || []);
+      setErrorMsg(null);
+
+      // FILTRO CLAVE: Solo se consideran asignaciones con lista cerrada y sellada ('Asistió' o 'Ausente')
+      const [resAlumnos, resAsig] = await Promise.all([
+        supabase
+          .from('alumno')
+          .select('id_alumno, rut, nombre, correo, jornada, carrera')
+          .order('nombre', { ascending: true }),
+        supabase
+          .from('asignacion_turno')
+          .select(`
+            id_alumno,
+            horas_validadas,
+            estado_asignacion,
+            turno:id_turno (
+              fecha_inicio
+            )
+          `)
+          .in('estado_asignacion', ['Asistió', 'Ausente'])
+      ]);
+
+      if (resAlumnos.error) throw resAlumnos.error;
+      if (resAsig.error) throw resAsig.error;
+
+      setAlumnos(resAlumnos.data || []);
+      setAsignacionesMes(resAsig.data || []);
     } catch (err) {
-      console.error('Error al sincronizar directorio:', err);
+      console.error('Error cargando alumnos ayudantes:', err);
+      setErrorMsg(err.message || 'Error al conectar con la base de datos de Supabase.');
     } finally {
       setLoading(false);
     }
-  }, [anioActivo, mesActivoNumero]);
-
-  useEffect(() => {
-    cargarDatos();
-  }, [cargarDatos, refreshTrigger]);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
-        setMenuMesAbierto(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
-    setPaginaActual(1);
-  }, [busqueda]);
+    cargarAlumnosYHoras();
+  }, [cargarAlumnosYHoras]);
 
-  const cambiarMes = (numeroMes) => {
-    setMesActivoNumero(numeroMes);
-    setMenuMesAbierto(false);
-    setPaginaActual(1);
-  };
-
-  const ordenarPor = (key) => {
-    setSortConfig((prev) => {
-      if (prev.key === key) {
-        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
-      }
-      return { key, direction: 'asc' };
-    });
-  };
-
+  // Consolidación reactiva de horas y montos ($) según el mes seleccionado
   const alumnosProcesados = useMemo(() => {
-    const q = busqueda.toLowerCase().trim();
+    const mapaHoras = {};
 
-    let lista = alumnos.filter((alumno) => {
-      if (!q) return true;
-      return (
-        alumno.nombre?.toLowerCase().includes(q) ||
-        alumno.rut?.toLowerCase().includes(q) ||
-        String(alumno.id_alumno).includes(q)
-      );
-    });
+    asignacionesMes.forEach((asig) => {
+      if (!asig.turno?.fecha_inicio) return;
+      const fechaTurno = new Date(asig.turno.fecha_inicio);
+      const mesTurno = fechaTurno.getMonth();
 
-    return lista.sort((a, b) => {
-      let valA = a[sortConfig.key];
-      let valB = b[sortConfig.key];
-
-      if (sortConfig.key === 'horas_validadas') {
-        valA = parseFloat(valA) || 0;
-        valB = parseFloat(valB) || 0;
-      } else if (sortConfig.key === 'id_alumno') {
-        valA = Number(valA) || 0;
-        valB = Number(valB) || 0;
-      } else {
-        valA = String(valA || '').toLowerCase();
-        valB = String(valB || '').toLowerCase();
+      if (mesTurno === Number(mesSeleccionado)) {
+        const id = asig.id_alumno;
+        const horas = Number(asig.horas_validadas) || 0;
+        mapaHoras[id] = (mapaHoras[id] || 0) + horas;
       }
-
-      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
     });
-  }, [alumnos, busqueda, sortConfig]);
 
-  const totalPaginas = Math.ceil(alumnosProcesados.length / FILAS_POR_PAGINA) || 1;
-  const indiceInicio = (paginaActual - 1) * FILAS_POR_PAGINA;
-  const alumnosPaginados = alumnosProcesados.slice(indiceInicio, indiceInicio + FILAS_POR_PAGINA);
-
-  /**
-   * REGLA ESTRICTA: El archivo Excel contiene ÚNICA Y EXCLUSIVAMENTE
-   * las 4 columnas requeridas en el orden exacto: Nombre, RUN, Correo y Monto.
-   */
-  const exportarExcel = () => {
-    if (alumnosProcesados.length === 0) {
-      alert('No existen alumnos para exportar.');
-      return;
-    }
-
-    const dataExcel = alumnosProcesados.map((a) => {
-      const horas = parseFloat(a.horas_validadas || 0);
-      const montoTotal = Math.round(horas * valorHoraTarifa);
-
+    return alumnos.map((al) => {
+      const horasTotal = mapaHoras[al.id_alumno] || 0;
+      const montoTotal = Math.round(horasTotal * VALOR_HORA_DEFAULT);
       return {
-        Nombre: a.nombre,
-        RUN: a.rut,
-        Correo: a.correo,
-        Monto: montoTotal,
+        ...al,
+        horas_total: horasTotal,
+        monto_total: montoTotal
       };
     });
+  }, [alumnos, asignacionesMes, mesSeleccionado]);
 
-    const worksheet = XLSX.utils.json_to_sheet(dataExcel);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, `Nomina_${nombreMesActivo}`);
-    XLSX.writeFile(workbook, `Konor_Nomina_${nombreMesActivo}_${anioActivo}.xlsx`);
+  // Filtrado reactivo en tiempo real por Nombre o RUT
+  const alumnosFiltrados = useMemo(() => {
+    const query = terminoBusqueda.toLowerCase().trim();
+    return alumnosProcesados.filter((al) => {
+      const coincideNombre = (al.nombre || '').toLowerCase().includes(query);
+      const coincideRut = (al.rut || '').toLowerCase().includes(query);
+      return coincideNombre || coincideRut;
+    });
+  }, [alumnosProcesados, terminoBusqueda]);
+
+  // Manejador del orden por columna
+  const handleOrdenar = (columna) => {
+    if (columnaOrden === columna) {
+      setDireccionOrden((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setColumnaOrden(columna);
+      setDireccionOrden('asc');
+    }
   };
 
+  // Ordenamiento dinámico
+  const alumnosOrdenados = useMemo(() => {
+    const lista = [...alumnosFiltrados];
+    lista.sort((a, b) => {
+      let valA = a[columnaOrden];
+      let valB = b[columnaOrden];
+
+      if (columnaOrden === 'nombre' || columnaOrden === 'rut') {
+        valA = (valA || '').toString().toLowerCase();
+        valB = (valB || '').toString().toLowerCase();
+        return direccionOrden === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      }
+
+      if (columnaOrden === 'horas_total' || columnaOrden === 'monto_total') {
+        valA = Number(valA || 0);
+        valB = Number(valB || 0);
+        return direccionOrden === 'asc' ? valA - valB : valB - valA;
+      }
+
+      return 0;
+    });
+    return lista;
+  }, [alumnosFiltrados, columnaOrden, direccionOrden]);
+
+  // Paginación
+  const totalPaginas = Math.ceil(alumnosOrdenados.length / ELEMENTOS_POR_PAGINA) || 1;
+  const indiceInicio = (paginaActual - 1) * ELEMENTOS_POR_PAGINA;
+  const alumnosPaginados = useMemo(() => {
+    return alumnosOrdenados.slice(indiceInicio, indiceInicio + ELEMENTOS_POR_PAGINA);
+  }, [alumnosOrdenados, indiceInicio]);
+
+  // Reiniciar a página 1 al filtrar o cambiar mes
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [terminoBusqueda, mesSeleccionado]);
+
+  // Inyección optimista reactiva (HU04 - Sin recargar página)
+  const handleAlumnoCreado = (nuevoAlumno) => {
+    setModalRegistroOpen(false);
+    if (nuevoAlumno) {
+      setAlumnos((prev) => [
+        { ...nuevoAlumno, horas_total: 0, monto_total: 0 },
+        ...prev
+      ]);
+    }
+    cargarAlumnosYHoras();
+  };
+
+  // Exportación a Excel limitada estrictamente a las 4 columnas visibles
+  const handleExportarExcel = () => {
+    if (!alumnosOrdenados || alumnosOrdenados.length === 0) return;
+
+    const datosExportar = alumnosOrdenados.map((a) => ({
+      'RUT': a.rut || 'Sin RUT',
+      'Nombre alumno': a.nombre,
+      'Horas Total': `${(a.horas_total || 0).toFixed(1).replace('.', ',')} hrs`,
+      'Monto ($)': `$${Number(a.monto_total || 0).toLocaleString('es-CL')}`
+    }));
+
+    const nombreMes = MESES.find((m) => m.valor === Number(mesSeleccionado))?.nombre || 'Mes';
+    const ws = XLSX.utils.json_to_sheet(datosExportar);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `Ayudantes_${nombreMes}`);
+    XLSX.writeFile(wb, `nomina_ayudantes_${nombreMes.toLowerCase()}.xlsx`);
+  };
+
+  const nombreMesActual = MESES.find((m) => m.valor === Number(mesSeleccionado))?.nombre || '';
+
   return {
+    loading,
+    errorMsg,
+    nombreMesActual,
+    terminoBusqueda,
+    setTerminoBusqueda,
+    mesSeleccionado,
+    setMesSeleccionado,
+    meses: MESES,
     alumnosPaginados,
-    totalPaginas,
+    alumnosOrdenados,
     paginaActual,
     setPaginaActual,
-    totalAlumnos: alumnosProcesados.length,
+    totalPaginas,
     indiceInicio,
-    FILAS_POR_PAGINA,
-    loading,
-    busqueda,
-    setBusqueda,
-    mesActivo: mesActivoNumero,
-    nombreMesActivo,
-    cambiarMes,
-    menuMesAbierto,
-    setMenuMesAbierto,
-    calendarRef,
-    sortConfig,
-    ordenarPor,
-    valorHoraTarifa,
-    exportarExcel,
-    recargar: cargarDatos,
+    elementosPorPagina: ELEMENTOS_POR_PAGINA,
+    columnaOrden,
+    direccionOrden,
+    handleOrdenar,
+    modalRegistroOpen,
+    setModalRegistroOpen,
+    handleAlumnoCreado,
+    handleExportarExcel,
+    recargarDirectorio: cargarAlumnosYHoras
   };
 }

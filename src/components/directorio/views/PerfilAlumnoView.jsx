@@ -335,15 +335,48 @@ export default function PerfilAlumnoView({
                     </td>
                   </tr>
                 ) : (
-                  turnosHistorial.map((t, idx) => (
-                    <tr key={t.id_asignacion || idx}>
-                      <td className="font-mono text-xs text-slate-600">{t.fecha || '--/--/----'}</td>
-                      <td className="text-sm font-semibold text-[#06113c]">{t.nombre_evento || 'Turno operativo'}</td>
-                      <td className="text-right font-mono font-bold text-slate-700">
-                        {Number(t.horas_validadas || 0).toFixed(1).replace('.', ',')} hrs
-                      </td>
-                    </tr>
-                  ))
+                  turnosHistorial.map((t, idx) => {
+                    const esAjuste = Boolean(t.esAjusteLedger);
+                    const horas = Number(t.horas_validadas || 0);
+                    const signo = horas > 0 && esAjuste ? '+' : '';
+
+                    return (
+                      <tr 
+                        key={t.id || t.id_asignacion || idx}
+                        style={esAjuste ? { backgroundColor: 'rgba(67, 176, 196, 0.05)' } : {}}
+                      >
+                        <td className="font-mono text-xs text-slate-600">
+                          {t.fecha || '--/--/----'}
+                        </td>
+                        <td className="text-sm font-semibold text-[#06113c]">
+                          {t.nombre_evento || 'Turno operativo'}
+                          {esAjuste && (
+                            <span style={{ 
+                              marginLeft: '8px', 
+                              fontSize: '0.68rem', 
+                              backgroundColor: '#e0f2fe', 
+                              color: '#0369a1', 
+                              padding: '2px 6px', 
+                              borderRadius: '4px',
+                              fontWeight: 700 
+                            }}>
+                              LEDGER
+                            </span>
+                          )}
+                        </td>
+                        <td 
+                          className="text-right font-mono font-bold"
+                          style={{ 
+                            color: esAjuste 
+                              ? (horas >= 0 ? '#16a34a' : '#dc2626') 
+                              : '#334155' 
+                          }}
+                        >
+                          {signo}{horas.toFixed(1).replace('.', ',')} hrs
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

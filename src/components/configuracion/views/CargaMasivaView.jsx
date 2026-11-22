@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCargaMasiva } from '../hooks/useCargaMasiva.js';
 import * as XLSX from 'xlsx';
 import { 
@@ -6,7 +6,6 @@ import {
   UploadCloud, 
   CheckCircle2, 
   AlertCircle, 
-  Loader2, 
   ArrowLeft,
   Download
 } from 'lucide-react';
@@ -22,6 +21,14 @@ export default function CargaMasivaView({ onVolver }) {
     limpiarArchivo,
     procesarCarga,
   } = useCargaMasiva();
+
+  // Estado breve para mostrar el esqueleto al abrir la vista (como las demás pestañas)
+  const [cargandoVista, setCargandoVista] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setCargandoVista(false), 350);
+    return () => clearTimeout(timer);
+  }, []);
 
   const descargarPlantillaEjemplo = () => {
     const datosEjemplo = [
@@ -60,6 +67,67 @@ export default function CargaMasivaView({ onVolver }) {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'NominaAlumnos');
     XLSX.writeFile(workbook, 'plantilla_alumnos_ayudantes.xlsx');
   };
+
+  // SKELETON ESTRUCTURAL (al abrir la vista o al procesar el archivo)
+  if (cargandoVista || procesando) {
+    return (
+      <div className="konor-carga-view">
+        {onVolver && (
+          <div
+            className="konor-skeleton-block"
+            style={{ width: '90px', height: '28px', marginBottom: '20px', borderRadius: '6px' }}
+          />
+        )}
+
+        <div className="konor-carga-card">
+          {/* Cabecera Skeleton */}
+          <div className="konor-carga-header">
+            <div className="konor-carga-header-main">
+              <div
+                className="konor-skeleton-block"
+                style={{ width: '52px', height: '52px', borderRadius: '12px', flexShrink: 0 }}
+              />
+              <div>
+                <div
+                  className="konor-skeleton-block"
+                  style={{ width: '320px', maxWidth: '100%', height: '24px', marginBottom: '8px' }}
+                />
+                <div
+                  className="konor-skeleton-block"
+                  style={{ width: '420px', maxWidth: '100%', height: '14px' }}
+                />
+              </div>
+            </div>
+
+            <div
+              className="konor-skeleton-block"
+              style={{ width: '220px', height: '34px', borderRadius: '8px' }}
+            />
+          </div>
+
+          {/* Dropzone Skeleton */}
+          <div
+            className="konor-skeleton-block"
+            style={{ width: '100%', height: '165px', borderRadius: '14px' }}
+          />
+
+          {/* Preview de archivo Skeleton */}
+          <div
+            className="konor-skeleton-block"
+            style={{ width: '100%', height: '46px', marginTop: '16px', borderRadius: '10px' }}
+          />
+
+          {/* Barra de acciones Skeleton */}
+          <div className="konor-carga-actions">
+            <div
+              className="konor-skeleton-block"
+              style={{ width: '185px', height: '40px', borderRadius: '8px' }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="konor-carga-view">
@@ -144,15 +212,7 @@ export default function CargaMasivaView({ onVolver }) {
             disabled={!archivo || procesando}
             className="konor-btn-procesar"
           >
-            {procesando ? (
-              <>
-                <Loader2 size={16} className="konor-spinner-icon" /> <span>Procesando nómina...</span>
-              </>
-            ) : (
-              <>
-                <UploadCloud size={16} /> <span>Iniciar Carga Masiva</span>
-              </>
-            )}
+            <UploadCloud size={16} /> <span>Iniciar Carga Masiva</span>
           </button>
         </div>
       </div>

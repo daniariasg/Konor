@@ -58,6 +58,7 @@ export function useDetalleTurno(input) {
   const [alumnoParaBaja, setAlumnoParaBaja] = useState(null);
   const [listaAbierta, setListaAbierta] = useState(false);
   const [estadoTurno, setEstadoTurno] = useState(turno?.estado || '');
+  const [topeHorasMensual, setTopeHorasMensual] = useState(60);
 
   const storageKey = idTurno ? `konor_borrador_turno_${idTurno}` : null;
 
@@ -87,30 +88,58 @@ export function useDetalleTurno(input) {
     try {
       setLoading(true);
 
-      const { data: alumnosBD } = await supabase
-        .from('alumno')
-        .select('id_alumno, nombre, rut, correo, jornada, activo')
-        .order('nombre', { ascending: true });
-
       const ahora = new Date();
-      const primerDia = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString();
-      const ultimoDia = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+      const año = ahora.getFullYear();
+      const mes = ahora.getMonth();
+      const primerDiaUTC = new Date(Date.UTC(año, mes, 1, 0, 0, 0)).toISOString();
+      const ultimoDiaUTC = new Date(Date.UTC(año, mes + 1, 0, 23, 59, 59, 999)).toISOString();
 
-      const { data: asigMes } = await supabase
-        .from('asignacion_turno')
-        .select('id_alumno, horas_validadas, turno!inner(fecha_inicio)')
-        .in('estado_asignacion', ['Asistió', 'Ausente'])
-        .gte('turno.fecha_inicio', primerDia)
-        .lte('turno.fecha_inicio', ultimoDia);
+      // CONSULTA CONSOLIDADA: Catálogo, Turnos Cerrados, Ajustes Ledger y Configuración
+      const [resAlumnos, resAsig, resLedger, resConfig] = await Promise.all([
+        supabase
+          .from('alumno')
+          .select('id_alumno, nombre, rut, correo, jornada, activo')
+          .order('nombre', { ascending: true }),
 
-      const horasMap = (asigMes || []).reduce((acc, curr) => {
+        supabase
+          .from('asignacion_turno')
+          .select('id_alumno, horas_validadas, turno!inner(fecha_inicio)')
+          .in('estado_asignacion', ['Asistió', 'Ausente'])
+          .gte('turno.fecha_inicio', primerDiaUTC)
+          .lte('turno.fecha_inicio', ultimoDiaUTC),
+
+        supabase
+          .from('ajuste_ledger')
+          .select('id_alumno, delta_horas, fecha_registro')
+          .gte('fecha_registro', primerDiaUTC)
+          .lte('fecha_registro', ultimoDiaUTC),
+
+        supabase
+          .from('configuracion_sistema')
+          .select('tope_horas_mensual')
+          .limit(1)
+          .maybeSingle()
+      ]);
+
+      if (resConfig.data?.tope_horas_mensual) {
+        setTopeHorasMensual(Number(resConfig.data.tope_horas_mensual));
+      }
+
+      // Mapa de horas de turnos
+      const horasMap = (resAsig.data || []).reduce((acc, curr) => {
         acc[curr.id_alumno] = (acc[curr.id_alumno] || 0) + (parseFloat(curr.horas_validadas) || 0);
         return acc;
       }, {});
 
-      const catalogo = (alumnosBD || []).map((al) => ({
+      // Suma algebraica con asientos del Ledger
+      (resLedger.data || []).forEach((adj) => {
+        const id = adj.id_alumno;
+        horasMap[id] = (horasMap[id] || 0) + (parseFloat(adj.delta_horas) || 0);
+      });
+
+      const catalogo = (resAlumnos.data || []).map((al) => ({
         ...al,
-        horas_acumuladas: horasMap[al.id_alumno] || 0
+        horas_acumuladas: Math.max(0, horasMap[al.id_alumno] || 0)
       }));
       setCatalogoAlumnos(catalogo);
 
@@ -129,12 +158,20 @@ export function useDetalleTurno(input) {
       const existeEnBD = asignacionesBD && asignacionesBD.length > 0;
 
       if (borradorGuardado) {
-        // Prioridad al borrador de trabajo del usuario
         try {
           const parsed = JSON.parse(borradorGuardado);
-          setInteresados(parsed);
+          // Actualizar las horas acumuladas del borrador con las horas reales sincronizadas
+          const borradorSincronizado = parsed.map((item) => {
+            const alumnoReal = catalogo.find((c) => String(c.id_alumno) === String(item.id_alumno));
+            return {
+              ...item,
+              horas_acumuladas: alumnoReal?.horas_acumuladas ?? item.horas_acumuladas
+            };
+          });
+
+          setInteresados(borradorSincronizado);
           setTurnoYaGuardado(existeEnBD);
-          setModoEdicion(true); // Permite continuar la edición del borrador
+          setModoEdicion(true);
           return;
         } catch (e) {
           console.error('Error parseando borrador local:', e);
@@ -217,10 +254,10 @@ export function useDetalleTurno(input) {
       })
       .map((al) => ({
         ...al,
-        supera_limite: (al.horas_acumuladas + duracionTurno) > 60
+        supera_limite: (al.horas_acumuladas + duracionTurno) > topeHorasMensual
       }))
       .slice(0, 8);
-  }, [terminoBusqueda, catalogoAlumnos, interesados, duracionTurno]);
+  }, [terminoBusqueda, catalogoAlumnos, interesados, duracionTurno, topeHorasMensual]);
 
   const handleAgregarInteresado = (al) => {
     if (!modoEdicion || estadoTurno === 'Cerrado') return;
@@ -267,7 +304,6 @@ export function useDetalleTurno(input) {
 
     if (!target) return;
 
-    // Si ya estaba guardado previamente en Supabase como titular, requiere modal de baja
     if (turnoYaGuardado && target.asignadoOriginal) {
       setAlumnoParaBaja(target);
       return;
@@ -401,7 +437,6 @@ export function useDetalleTurno(input) {
 
       await supabase.from('turno').update({ estado: 'Asignado' }).eq('id_turno', idTurno);
       
-      // Limpiar el borrador temporal al consolidar
       if (storageKey) {
         sessionStorage.removeItem(storageKey);
       }

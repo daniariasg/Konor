@@ -52,7 +52,7 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
   };
 
-  // 1. Cargar historial de turnos del mes activo (solo turnos con lista cerrada y sellada)
+  // 1. Cargar historial consolidado: Turnos Cerrados + Asientos Ledger (HU16)
   const cargarDatos = useCallback(async () => {
     if (!alumno?.id_alumno) return;
 
@@ -65,8 +65,8 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
       const primerDia = new Date(Date.UTC(año, mes, 1, 0, 0, 0)).toISOString();
       const ultimoDia = new Date(Date.UTC(año, mes + 1, 0, 23, 59, 59, 999)).toISOString();
 
-      // Consultar únicamente turnos cerrados/sellados del mes para el historial y cancelaciones para la bitácora
-      const [resTurnosMes, resCancelaciones] = await Promise.all([
+      // Consultar turnos cerrados, cancelaciones para bitácora Y ajustes contables de Ledger en paralelo
+      const [resTurnosMes, resCancelaciones, resLedger] = await Promise.all([
         supabase
           .from('asignacion_turno')
           .select(`
@@ -81,9 +81,10 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
             )
           `)
           .eq('id_alumno', alumno.id_alumno)
-          .in('estado_asignacion', ['Asistió', 'Ausente']) // CLAVE: Solo turnos cerrados
+          .in('estado_asignacion', ['Asistió', 'Ausente'])
           .gte('turno.fecha_inicio', primerDia)
           .lte('turno.fecha_inicio', ultimoDia),
+
         supabase
           .from('asignacion_turno')
           .select(`
@@ -96,32 +97,88 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
             )
           `)
           .eq('id_alumno', alumno.id_alumno)
-          .eq('estado_asignacion', 'Canceló turno')
+          .eq('estado_asignacion', 'Canceló turno'),
+
+        supabase
+          .from('ajuste_ledger')
+          .select(`
+            id_ajuste,
+            delta_horas,
+            justificacion,
+            fecha_registro,
+            turno:id_turno (
+              id_turno,
+              nombre_evento
+            )
+          `)
+          .eq('id_alumno', alumno.id_alumno)
+          .gte('fecha_registro', primerDia)
+          .lte('fecha_registro', ultimoDia)
       ]);
 
       if (resTurnosMes.error) throw resTurnosMes.error;
+      if (resLedger.error) throw resLedger.error;
 
-      // Mapear turnos del mes
+      // A. Mapear turnos normales del mes
       const turnosMapeados = (resTurnosMes.data || []).map((asig) => {
         const t = asig.turno || {};
         let fechaFormat = '--/--/----';
+        let timestamp = 0;
         if (t.fecha_inicio) {
+          timestamp = new Date(t.fecha_inicio).getTime();
           const f = t.fecha_inicio.substring(0, 10);
           const [yyyy, mm, dd] = f.split('-');
           fechaFormat = `${dd}/${mm}/${yyyy}`;
         }
         return {
+          id: `turno-${asig.id_asignacion}`,
           id_asignacion: asig.id_asignacion,
           id_turno: t.id_turno,
           nombre_evento: t.nombre_evento,
           fecha: fechaFormat,
+          timestamp,
           horas_validadas: Number(asig.horas_validadas) || 0,
+          esAjusteLedger: false,
           estado_asignacion: asig.estado_asignacion
         };
       });
-      setTurnosHistorial(turnosMapeados);
 
-      // Mapear cancelaciones como entradas de bitácora
+      // B. Mapear asientos contables de ajuste (Ledger) para integrarlos al historial
+      const ajustesMapeados = (resLedger.data || []).map((aj) => {
+        let fechaFormat = '--/--/----';
+        let timestamp = 0;
+        if (aj.fecha_registro) {
+          timestamp = new Date(aj.fecha_registro).getTime();
+          const d = new Date(aj.fecha_registro);
+          const dd = String(d.getUTCDate()).padStart(2, '0');
+          const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+          const yyyy = d.getUTCFullYear();
+          fechaFormat = `${dd}/${mm}/${yyyy}`;
+        }
+
+        const nombreEventoAsociado = aj.turno?.nombre_evento 
+          ? `Ajuste (${aj.turno.nombre_evento}): ${aj.justificacion}`
+          : `Ajuste Ledger: ${aj.justificacion}`;
+
+        return {
+          id: `ledger-${aj.id_ajuste}`,
+          id_asignacion: `adj-${aj.id_ajuste}`,
+          id_turno: aj.turno?.id_turno || null,
+          nombre_evento: nombreEventoAsociado,
+          fecha: fechaFormat,
+          timestamp,
+          horas_validadas: Number(aj.delta_horas) || 0,
+          esAjusteLedger: true,
+          estado_asignacion: 'Ajuste Contable'
+        };
+      });
+
+      // C. Unir ambos historiales y ordenar cronológicamente de forma descendente
+      const historialCompleto = [...turnosMapeados, ...ajustesMapeados];
+      historialCompleto.sort((a, b) => b.timestamp - a.timestamp);
+      setTurnosHistorial(historialCompleto);
+
+      // D. Mapear cancelaciones como entradas de bitácora
       const cancels = (resCancelaciones.data || []).map((c) => ({
         id: `cancel-${c.id_asignacion}`,
         tipo: 'Cancelacion',
@@ -132,7 +189,7 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
       setCancelacionesTurnos(cancels);
 
     } catch (err) {
-      console.error('Error cargando datos de turnos/bitácora:', err);
+      console.error('Error cargando datos consolidados del alumno:', err);
     } finally {
       setCargandoTurnos(false);
     }

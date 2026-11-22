@@ -10,6 +10,13 @@ const VALID_MIME_TYPES = [
   'text/csv',
 ];
 
+const normalizarEncabezado = (texto) =>
+  String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
 export function useCargaMasiva() {
   const [archivo, setArchivo] = useState(null);
   const [procesando, setProcesando] = useState(false);
@@ -19,7 +26,7 @@ export function useCargaMasiva() {
   const validarArchivo = (file) => {
     if (!file) return 'No se seleccionó ningún archivo.';
     if (file.size > MAX_FILE_SIZE_BYTES) return 'El archivo supera el límite de 5 MB.';
-    
+
     const nombreLower = file.name.toLowerCase();
     const extensionValida = VALID_EXTENSIONS.some((ext) => nombreLower.endsWith(ext));
     if (!extensionValida) return 'Formato no admitido. Usa un archivo .xlsx o .csv.';
@@ -69,30 +76,49 @@ export function useCargaMasiva() {
         throw new Error('La planilla no contiene filas de datos.');
       }
 
-      // Validar columnas obligatorias
-      const llaves = Object.keys(rawRows[0]).map((k) => k.trim().toLowerCase());
+      // Validar columnas obligatorias ignorando tildes y mayúsculas
+      const llaves = Object.keys(rawRows[0]).map(normalizarEncabezado);
       const requeridas = ['nombre', 'rut', 'correo'];
       const faltantes = requeridas.filter((col) => !llaves.includes(col));
       if (faltantes.length > 0) {
         throw new Error(`Faltan columnas requeridas: ${faltantes.join(', ')}.`);
       }
 
-      const payload = rawRows.map((row) => {
-        const getVal = (campo) => {
-          const key = Object.keys(row).find((k) => k.trim().toLowerCase() === campo);
-          return key ? String(row[key]).trim() : '';
-        };
+      const payload = rawRows
+        .map((row) => {
+          const getVal = (...alias) => {
+            const aliasNorm = alias.map(normalizarEncabezado);
+            const key = Object.keys(row).find((k) =>
+              aliasNorm.includes(normalizarEncabezado(k))
+            );
+            return key ? String(row[key]).trim() : '';
+          };
 
-        return {
-          nombre: getVal('nombre'),
-          rut: getVal('rut'),
-          correo: getVal('correo').toLowerCase(),
-          jornada: getVal('jornada') || 'Diurno',
-          carrera: getVal('carrera') || null,
-          telefono: getVal('telefono') || null,
-          activo: true
-        };
-      }).filter((al) => al.rut && al.correo && al.nombre);
+          const jornadaRaw = getVal('jornada');
+          const jornadaNorm = normalizarEncabezado(jornadaRaw);
+          const jornadaFinal = jornadaNorm.startsWith('vesp') ? 'Vespertino' : 'Diurno';
+
+          const telefonoRaw = getVal(
+            'telefono',
+            'celular',
+            'fono',
+            'contacto',
+            'numero',
+            'numero de telefono',
+            'nro telefono'
+          );
+
+          return {
+            nombre: getVal('nombre'),
+            rut: getVal('rut'),
+            correo: getVal('correo').toLowerCase(),
+            jornada: jornadaFinal,
+            carrera: getVal('carrera') || null,
+            telefono: telefonoRaw || null,
+            activo: true
+          };
+        })
+        .filter((al) => al.rut && al.correo && al.nombre);
 
       if (payload.length === 0) {
         throw new Error('No se encontraron registros válidos de estudiantes.');

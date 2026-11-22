@@ -1,16 +1,19 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { sanitizarTextoPlano, validarTextoSeguro } from '../../../utils/sanitizer.js';
+import { validarTextoSeguro } from '../../../utils/sanitizer.js';
 import { supabase } from '../../../config/supabase.js';
 
 const procesarEntradaSegura = (textoBruto) => {
   const { esValido, valorLimpio } = validarTextoSeguro(textoBruto);
-  
+
   if (!esValido) {
     throw new Error('El texto ingresado contiene caracteres no permitidos o posibles scripts maliciosos.');
   }
-  
+
   return valorLimpio;
 };
+
+const normalizarJornadaUI = (jornada) =>
+  jornada === 'Vespertino' || jornada === 'Vespertina' ? 'Vespertina' : 'Diurna';
 
 export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
   const [modoEdicion, setModoEdicion] = useState(false);
@@ -21,7 +24,7 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
   // Formulario del alumno
   const [form, setForm] = useState({
     rut: alumno?.rut || '',
-    jornada: alumno?.jornada === 'Vespertino' || alumno?.jornada === 'Vespertina' ? 'Vespertina' : 'Diurna',
+    jornada: normalizarJornadaUI(alumno?.jornada),
     telefono: alumno?.telefono || '',
     correo: alumno?.correo || '',
     carrera: alumno?.carrera || ''
@@ -34,12 +37,12 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
   const [cancelacionesTurnos, setCancelacionesTurnos] = useState([]);
   const [nuevaNota, setNuevaNota] = useState('');
 
-  // Sincronizar datos al cambiar de alumno
+  // Sincronizar datos iniciales al cambiar de alumno
   useEffect(() => {
     if (alumno) {
       setForm({
         rut: alumno.rut || '',
-        jornada: alumno.jornada === 'Vespertino' || alumno.jornada === 'Vespertina' ? 'Vespertina' : 'Diurna',
+        jornada: normalizarJornadaUI(alumno.jornada),
         telefono: alumno.telefono || '',
         correo: alumno.correo || '',
         carrera: alumno.carrera || ''
@@ -52,7 +55,7 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
   };
 
-  // 1. Cargar historial consolidado: Turnos Cerrados + Asientos Ledger (HU16)
+  // 1. Cargar ficha fresca del alumno + historial consolidado (Turnos Cerrados + Ledger)
   const cargarDatos = useCallback(async () => {
     if (!alumno?.id_alumno) return;
 
@@ -65,8 +68,13 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
       const primerDia = new Date(Date.UTC(año, mes, 1, 0, 0, 0)).toISOString();
       const ultimoDia = new Date(Date.UTC(año, mes + 1, 0, 23, 59, 59, 999)).toISOString();
 
-      // Consultar turnos cerrados, cancelaciones para bitácora Y ajustes contables de Ledger en paralelo
-      const [resTurnosMes, resCancelaciones, resLedger] = await Promise.all([
+      const [resAlumnoFresh, resTurnosMes, resCancelaciones, resLedger] = await Promise.all([
+        supabase
+          .from('alumno')
+          .select('id_alumno, rut, nombre, correo, jornada, carrera, telefono, bitacora')
+          .eq('id_alumno', alumno.id_alumno)
+          .single(),
+
         supabase
           .from('asignacion_turno')
           .select(`
@@ -116,6 +124,18 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
           .lte('fecha_registro', ultimoDia)
       ]);
 
+      if (resAlumnoFresh.data) {
+        const fresh = resAlumnoFresh.data;
+        setForm({
+          rut: fresh.rut || '',
+          jornada: normalizarJornadaUI(fresh.jornada),
+          telefono: fresh.telefono || '',
+          correo: fresh.correo || '',
+          carrera: fresh.carrera || ''
+        });
+        setNotasManuales(Array.isArray(fresh.bitacora) ? fresh.bitacora : []);
+      }
+
       if (resTurnosMes.error) throw resTurnosMes.error;
       if (resLedger.error) throw resLedger.error;
 
@@ -143,7 +163,7 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
         };
       });
 
-      // B. Mapear asientos contables de ajuste (Ledger) para integrarlos al historial
+      // B. Mapear asientos contables de ajuste (Ledger)
       const ajustesMapeados = (resLedger.data || []).map((aj) => {
         let fechaFormat = '--/--/----';
         let timestamp = 0;
@@ -156,7 +176,7 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
           fechaFormat = `${dd}/${mm}/${yyyy}`;
         }
 
-        const nombreEventoAsociado = aj.turno?.nombre_evento 
+        const nombreEventoAsociado = aj.turno?.nombre_evento
           ? `Ajuste (${aj.turno.nombre_evento}): ${aj.justificacion}`
           : `Ajuste Ledger: ${aj.justificacion}`;
 
@@ -173,7 +193,7 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
         };
       });
 
-      // C. Unir ambos historiales y ordenar cronológicamente de forma descendente
+      // C. Unir ambos historiales y ordenar cronológicamente
       const historialCompleto = [...turnosMapeados, ...ajustesMapeados];
       historialCompleto.sort((a, b) => b.timestamp - a.timestamp);
       setTurnosHistorial(historialCompleto);
@@ -187,7 +207,6 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
         comentario: `Canceló participación en turno "${c.turno?.nombre_evento || 'Operativo'}". Motivo: ${c.motivo_cancelacion || 'Sin motivo especificado'}.`
       }));
       setCancelacionesTurnos(cancels);
-
     } catch (err) {
       console.error('Error cargando datos consolidados del alumno:', err);
     } finally {
@@ -212,11 +231,18 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
 
     try {
       setGuardando(true);
+
+      const limpiarCampo = (val) =>
+        String(val || '').replace(/[<>]/g, '').trim();
+
+      const telefonoLimpio = limpiarCampo(form.telefono);
+      const carreraLimpia = limpiarCampo(form.carrera);
+
       const payload = {
-        rut: form.rut?.trim(),
-        telefono: form.telefono?.trim(),
-        correo: form.correo?.trim(),
-        carrera: form.carrera?.trim(),
+        rut: limpiarCampo(form.rut),
+        telefono: telefonoLimpio || null,
+        correo: limpiarCampo(form.correo).toLowerCase(),
+        carrera: carreraLimpia || null,
         jornada: form.jornada === 'Vespertina' ? 'Vespertino' : 'Diurno'
       };
 
@@ -224,10 +250,20 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
         .from('alumno')
         .update(payload)
         .eq('id_alumno', alumno.id_alumno)
-        .select()
+        .select('id_alumno, rut, nombre, correo, jornada, carrera, telefono, bitacora')
         .single();
 
       if (error) throw error;
+
+      if (data) {
+        setForm({
+          rut: data.rut || '',
+          jornada: normalizarJornadaUI(data.jornada),
+          telefono: data.telefono || '',
+          correo: data.correo || '',
+          carrera: data.carrera || ''
+        });
+      }
 
       setModoEdicion(false);
       if (onActualizado) onActualizado(data);
@@ -241,7 +277,7 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
   };
 
   // 3. Agregar nota a la bitácora
-  const handleAgregarNota = async () => {
+const handleAgregarNota = async () => {
     if (!nuevaNota.trim() || !alumno?.id_alumno) return { success: false };
 
     try {
@@ -249,7 +285,7 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
       const nuevaEntrada = {
         id: `nota-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         fecha: new Date().toISOString(),
-        comentario: nuevaNota.trim(),
+        comentario: nuevaNota.replace(/[<>]/g, '').trim(),
         tipo: 'Observacion'
       };
 
@@ -274,7 +310,6 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
       setGuardandoNota(false);
     }
   };
-
   // 4. Eliminar nota manual de la bitácora
   const handleEliminarNota = async (idNota) => {
     if (!idNota || !alumno?.id_alumno) return { success: false };
@@ -299,6 +334,7 @@ export function usePerfilAlumno({ alumno, mesActivo, onActualizado }) {
   };
 
   return {
+    loading: cargandoTurnos,
     modoEdicion,
     setModoEdicion,
     guardando,

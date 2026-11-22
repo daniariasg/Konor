@@ -1,15 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../../config/supabase.js';
-import { 
-  X, 
-  AlertCircle, 
-  Save, 
-  Scale, 
-  Search, 
-  ArrowRight, 
-  User, 
-  AlertTriangle 
+import {
+  X,
+  AlertCircle,
+  Save,
+  Scale,
+  Search,
+  ArrowRight,
+  User,
+  AlertTriangle
 } from 'lucide-react';
+
+const formatearHorasMinutos = (horasDecimales) => {
+  const totalMin = Math.round(Math.abs(Number(horasDecimales) || 0) * 60);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  if (m > 0) return `${m}m`;
+  return '0h';
+};
 
 export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar, guardando }) {
   const [busquedaAlumno, setBusquedaAlumno] = useState('');
@@ -19,9 +29,10 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
   const [turnosAlumno, setTurnosAlumno] = useState([]);
   const [cargandoTurnos, setCargandoTurnos] = useState(false);
   const [idTurno, setIdTurno] = useState('');
-  
+
   const [tipoSigno, setTipoSigno] = useState('+');
-  const [deltaHoras, setDeltaHoras] = useState('');
+  const [horasInput, setHorasInput] = useState('');
+  const [minutosInput, setMinutosInput] = useState('');
   const [justificacion, setJustificacion] = useState('');
   const [errorLocal, setErrorLocal] = useState('');
   const [alertaModalBloqueo, setAlertaModalBloqueo] = useState(null);
@@ -34,7 +45,8 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
       setTurnosAlumno([]);
       setIdTurno('');
       setTipoSigno('+');
-      setDeltaHoras('');
+      setHorasInput('');
+      setMinutosInput('');
       setJustificacion('');
       setErrorLocal('');
       setAlertaModalBloqueo(null);
@@ -91,7 +103,6 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
           setTopeMaximo(Number(resConfig.data.tope_horas_mensual));
         }
 
-        // Mapear únicamente turnos efectivamente cerrados
         const turnosMapeados = (resTurnos.data || []).map((a) => ({
           id_turno: a.turno.id_turno,
           nombre_evento: a.turno.nombre_evento,
@@ -102,7 +113,6 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
 
         setTurnosAlumno(turnosMapeados);
 
-        // Sumar horas ejecutadas del mes activo
         let totalHoras = (resTurnos.data || [])
           .filter((a) => {
             if (!a.turno?.fecha_inicio) return false;
@@ -111,7 +121,6 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
           })
           .reduce((acc, curr) => acc + (Number(curr.horas_validadas) || 0), 0);
 
-        // Sumar deltas de Ledger registrados en el mes
         (resLedger.data || []).forEach((adj) => {
           totalHoras += (Number(adj.delta_horas) || 0);
         });
@@ -130,25 +139,45 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
   const alumnosFiltrados = useMemo(() => {
     const q = busquedaAlumno.trim().toLowerCase();
     if (!q) return [];
-    return alumnos.filter((a) => 
-      (a.nombre || '').toLowerCase().includes(q) || 
-      (a.rut || '').toLowerCase().includes(q)
-    ).slice(0, 6);
+    return alumnos
+      .filter((a) =>
+        (a.nombre || '').toLowerCase().includes(q) ||
+        (a.rut || '').toLowerCase().includes(q)
+      )
+      .slice(0, 6);
   }, [busquedaAlumno, alumnos]);
 
-  const valorAjuste = parseFloat(deltaHoras) || 0;
+  const horasNum = Math.max(0, parseInt(horasInput, 10) || 0);
+  const minutosNum = Math.max(0, Math.min(59, parseInt(minutosInput, 10) || 0));
+  const totalMinutosAjuste = horasNum * 60 + minutosNum;
+  const valorAjuste = Number((totalMinutosAjuste / 60).toFixed(4));
   const deltaFinal = tipoSigno === '-' ? -valorAjuste : valorAjuste;
   const nuevoSaldoMes = Math.max(0, Number(horasAcumuladasMes) + deltaFinal);
-  const superaTope = nuevoSaldoMes > topeMaximo;
-
-  const formatearDecimales = (num) => {
-    return Number(num).toLocaleString('es-CL', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
-    });
-  };
+  const superaTope = nuevoSaldoMes > topeMaximo + 0.0001;
 
   if (!isOpen) return null;
+
+  const handleMinutosChange = (e) => {
+    const val = e.target.value;
+    if (val === '') {
+      setMinutosInput('');
+      return;
+    }
+    const num = parseInt(val, 10);
+    if (Number.isNaN(num)) return;
+    setMinutosInput(String(Math.max(0, Math.min(59, num))));
+  };
+
+  const handleHorasChange = (e) => {
+    const val = e.target.value;
+    if (val === '') {
+      setHorasInput('');
+      return;
+    }
+    const num = parseInt(val, 10);
+    if (Number.isNaN(num)) return;
+    setHorasInput(String(Math.max(0, num)));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -158,16 +187,15 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
       setErrorLocal('Debe seleccionar a un alumno ayudante.');
       return;
     }
-    if (!valorAjuste || valorAjuste <= 0) {
-      setErrorLocal('Ingrese un valor de horas mayor a 0.');
+    if (totalMinutosAjuste <= 0) {
+      setErrorLocal('Ingrese al menos 1 hora o 1 minuto de ajuste.');
       return;
     }
 
-    // Modal de bloqueo por límite de jornada
     if (superaTope) {
       setAlertaModalBloqueo({
         titulo: 'Tope Mensual Excedido',
-        mensaje: `No es posible ingresar este ajuste. El alumno acumula actualmente ${formatearDecimales(horasAcumuladasMes)} hrs y la adición de +${formatearDecimales(valorAjuste)} hrs llevaría su saldo mensual a ${formatearDecimales(nuevoSaldoMes)} hrs, sobrepasando el tope institucional permitido de ${topeMaximo} hrs.`
+        mensaje: `No es posible ingresar este ajuste. El alumno acumula actualmente ${formatearHorasMinutos(horasAcumuladasMes)} y la adición de +${formatearHorasMinutos(valorAjuste)} llevaría su saldo mensual a ${formatearHorasMinutos(nuevoSaldoMes)}, sobrepasando el tope institucional permitido de ${topeMaximo}h.`
       });
       return;
     }
@@ -198,7 +226,7 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
           </div>
           <div>
             <h3 className="konor-modal-title">Ajuste Retroactivo (Ledger)</h3>
-            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Corrección sobre turnos cerrados (Tope: {topeMaximo} hrs)</span>
+            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Corrección sobre turnos cerrados (Tope: {topeMaximo}h)</span>
           </div>
           <button type="button" onClick={onClose} className="konor-btn-icon" style={{ marginLeft: 'auto' }}>
             <X size={18} />
@@ -281,7 +309,7 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
                   ) : (
                     turnosAlumno.map((t) => (
                       <option key={t.id_turno} value={t.id_turno}>
-                        {t.nombre_evento} ({t.fecha_inicio}) - Validó: {formatearDecimales(t.horas)} hrs
+                        {t.nombre_evento} ({t.fecha_inicio}) - Validó: {formatearHorasMinutos(t.horas)}
                       </option>
                     ))
                   )}
@@ -292,14 +320,14 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
 
           {alumnoSeleccionado && (
             <div>
-              <label className="konor-label">3. AJUSTE DE HORAS *</label>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <label className="konor-label">3. AJUSTE DE TIEMPO (HORAS Y MINUTOS) *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                 <select
                   value={tipoSigno}
                   onChange={(e) => setTipoSigno(e.target.value)}
                   className="konor-input"
                   style={{
-                    width: '120px', fontWeight: 800,
+                    fontWeight: 800,
                     backgroundColor: tipoSigno === '+' ? '#f0fdf4' : '#fef2f2',
                     color: tipoSigno === '+' ? '#16a34a' : '#dc2626'
                   }}
@@ -308,20 +336,41 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
                   <option value="-">- Restar</option>
                 </select>
 
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  placeholder="ej: 1.5"
-                  value={deltaHoras}
-                  onChange={(e) => setDeltaHoras(e.target.value)}
-                  className="konor-input font-mono"
-                  style={{ fontWeight: 700 }}
-                  required
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    placeholder="0"
+                    value={horasInput}
+                    onChange={handleHorasChange}
+                    className="konor-input font-mono"
+                    style={{ fontWeight: 700, paddingRight: '42px' }}
+                  />
+                  <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>
+                    hrs
+                  </span>
+                </div>
+
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="59"
+                    placeholder="0"
+                    value={minutosInput}
+                    onChange={handleMinutosChange}
+                    className="konor-input font-mono"
+                    style={{ fontWeight: 700, paddingRight: '42px' }}
+                  />
+                  <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>
+                    min
+                  </span>
+                </div>
               </div>
 
-              {valorAjuste > 0 && (
+              {totalMinutosAjuste > 0 && (
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '10px 14px', borderRadius: '6px',
@@ -330,11 +379,11 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
                 }}>
                   <div style={{ textAlign: 'center' }}>
                     <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block' }}>TOTAL MES ACTUAL</span>
-                    <strong style={{ fontSize: '0.9rem', color: '#06113c' }}>{formatearDecimales(horasAcumuladasMes)} hrs</strong>
+                    <strong style={{ fontSize: '0.9rem', color: '#06113c' }}>{formatearHorasMinutos(horasAcumuladasMes)}</strong>
                   </div>
 
                   <span style={{ fontWeight: 800, color: tipoSigno === '+' ? '#16a34a' : '#dc2626', fontSize: '0.95rem' }}>
-                    {tipoSigno} {formatearDecimales(valorAjuste)}
+                    {tipoSigno} {formatearHorasMinutos(valorAjuste)}
                   </span>
 
                   <ArrowRight size={16} className="text-slate-400" />
@@ -342,21 +391,21 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
                   <div style={{ textAlign: 'center' }}>
                     <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block' }}>PROYECCIÓN FINAL</span>
                     <strong style={{ fontSize: '0.9rem', color: superaTope ? '#dc2626' : '#43b0c4' }}>
-                      {formatearDecimales(nuevoSaldoMes)} / {topeMaximo} hrs
+                      {formatearHorasMinutos(nuevoSaldoMes)} / {topeMaximo}h
                     </strong>
                   </div>
                 </div>
               )}
 
               {superaTope && (
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '6px', 
-                  marginTop: '6px', 
-                  fontSize: '0.75rem', 
-                  color: '#dc2626', 
-                  fontWeight: 600 
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  marginTop: '6px',
+                  fontSize: '0.75rem',
+                  color: '#dc2626',
+                  fontWeight: 600
                 }}>
                   <AlertTriangle size={14} />
                   <span>Este ajuste excede el límite de {topeMaximo} horas mensuales del alumno.</span>
@@ -386,7 +435,7 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
             </button>
             <button
               type="submit"
-              disabled={guardando || !alumnoSeleccionado || !valorAjuste}
+              disabled={guardando || !alumnoSeleccionado || totalMinutosAjuste <= 0}
               className="konor-btn-primary"
             >
               <Save size={16} />
@@ -396,13 +445,13 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
         </form>
 
         {alertaModalBloqueo && (
-          <div 
-            className="konor-modal-backdrop" 
+          <div
+            className="konor-modal-backdrop"
             style={{ zIndex: 1100, backgroundColor: 'rgba(6, 17, 60, 0.7)' }}
             onClick={() => setAlertaModalBloqueo(null)}
           >
-            <div 
-              className="konor-modal-card" 
+            <div
+              className="konor-modal-card"
               style={{ maxWidth: '420px', padding: '24px' }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -414,7 +463,7 @@ export default function ModalNuevoAjuste({ isOpen, onClose, alumnos, onConfirmar
                   {alertaModalBloqueo.titulo}
                 </h3>
               </div>
-              
+
               <p style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.5, margin: '0 0 20px 0' }}>
                 {alertaModalBloqueo.mensaje}
               </p>

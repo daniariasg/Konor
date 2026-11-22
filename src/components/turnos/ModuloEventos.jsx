@@ -7,7 +7,7 @@ export default function ModuloEventos({ turnoSeleccionadoDirecto, onLimpiarTurno
   const [vista, setVista] = useState('lista'); // 'lista' | 'crear' | 'detalle'
   const [turnoActivo, setTurnoActivo] = useState(null);
 
-  // Efecto que detecta cuando se invoca un turno directo desde el Dashboard
+  // EFECTO DE NAVEGACIÓN PROFUNDA: Al hacer clic en un turno desde el Dashboard
   useEffect(() => {
     if (turnoSeleccionadoDirecto && turnoSeleccionadoDirecto.id_turno) {
       setTurnoActivo(turnoSeleccionadoDirecto);
@@ -15,7 +15,7 @@ export default function ModuloEventos({ turnoSeleccionadoDirecto, onLimpiarTurno
     }
   }, [turnoSeleccionadoDirecto]);
 
-  // Al hacer clic en una tarjeta de la lista general
+  // Al hacer clic en una tarjeta dentro de la lista de eventos
   const handleSeleccionarTurno = (turno) => {
     if (!turno) return;
     setTurnoActivo(turno);
@@ -40,7 +40,7 @@ export default function ModuloEventos({ turnoSeleccionadoDirecto, onLimpiarTurno
     }
   };
 
-  // Botón volver
+  // Botón volver / cerrar modal
   const handleVolver = () => {
     setTurnoActivo(null);
     if (onLimpiarTurnoDirecto) onLimpiarTurnoDirecto();
@@ -49,7 +49,7 @@ export default function ModuloEventos({ turnoSeleccionadoDirecto, onLimpiarTurno
 
   return (
     <div className="konor-modulo-container">
-      {vista === 'lista' && (
+      {(vista === 'lista' || vista === 'crear') && (
         <ListaTurnos
           onSeleccionarTurno={handleSeleccionarTurno}
           onAbrirCrear={handleAbrirCrear}
@@ -60,6 +60,7 @@ export default function ModuloEventos({ turnoSeleccionadoDirecto, onLimpiarTurno
         <FormCrearTurno
           onTurnoCreado={handleTurnoCreado}
           onVolver={handleVolver}
+          onCerrar={handleVolver}
         />
       )}
 

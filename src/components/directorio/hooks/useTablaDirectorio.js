@@ -53,10 +53,10 @@ export function useTablaDirectorio() {
       const ultimoDia = new Date(Date.UTC(anioSeleccionado, mesSeleccionado + 1, 0, 23, 59, 59, 999)).toISOString();
 
       const [resAlumnos, resAsig, resLedger, resConfig] = await Promise.all([
-        // 1. Catálogo de Alumnos
+        // 1. Catálogo de Alumnos (incluye telefono y bitacora)
         supabase
           .from('alumno')
-          .select('id_alumno, rut, nombre, correo, jornada, carrera')
+          .select('id_alumno, rut, nombre, correo, jornada, carrera, telefono, bitacora')
           .order('nombre', { ascending: true }),
 
         // 2. Horas selladas de turnos ejecutados

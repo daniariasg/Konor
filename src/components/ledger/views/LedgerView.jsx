@@ -2,19 +2,31 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../config/supabase.js';
 import { useLedger } from '../hooks/useLedger.js';
 import ModalNuevoAjuste from '../components/ModalNuevoAjuste.jsx';
-import { 
-  Plus, 
-  RefreshCw, 
-  CheckCircle2, 
-  AlertCircle, 
-  History, 
-  ArrowUpRight, 
+import {
+  Plus,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+  History,
+  ArrowUpRight,
   ArrowDownRight,
   ClipboardList,
   Clock,
   UserCheck
 } from 'lucide-react';
 import './LedgerView.css';
+
+const formatearDeltaHorasMinutos = (deltaHoras) => {
+  const num = Number(deltaHoras) || 0;
+  const signo = num > 0 ? '+' : num < 0 ? '-' : '';
+  const totalMin = Math.round(Math.abs(num) * 60);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h > 0 && m > 0) return `${signo}${h}h ${m}m`;
+  if (h > 0) return `${signo}${h}h`;
+  if (m > 0) return `${signo}${m}m`;
+  return '0h';
+};
 
 export default function LedgerView() {
   const {
@@ -33,7 +45,6 @@ export default function LedgerView() {
   const [auditoriasAsistencia, setAuditoriasAsistencia] = useState([]);
   const [loadingAuditoria, setLoadingAuditoria] = useState(false);
 
-  // Consulta robusta: evita fallos por relaciones relacionales faltantes en Supabase
   const cargarAuditoriasAsistencia = useCallback(async () => {
     try {
       setLoadingAuditoria(true);
@@ -135,7 +146,7 @@ export default function LedgerView() {
         </div>
       )}
 
-      {/* SELECTOR DE PESTAÑAS REDISEÑADO CON BOTONES ESTILIZADOS */}
+      {/* SELECTOR DE PESTAÑAS */}
       <div className="konor-auditoria-tabs-container">
         <button
           type="button"
@@ -174,7 +185,7 @@ export default function LedgerView() {
                   <tr>
                     <th style={{ width: '16%' }} className="th-left">FECHA REGISTRO</th>
                     <th style={{ width: '28%' }} className="th-left">ALUMNO AYUDANTE</th>
-                    <th style={{ width: '16%' }} className="th-center">AJUSTE (Δ HORAS)</th>
+                    <th style={{ width: '16%' }} className="th-center">AJUSTE (Δ TIEMPO)</th>
                     <th style={{ width: '24%' }} className="th-left">TURNO ASOCIADO</th>
                     <th style={{ width: '16%' }} className="th-left">JUSTIFICACIÓN</th>
                   </tr>
@@ -210,7 +221,7 @@ export default function LedgerView() {
                         <td className="th-center">
                           <span className={`konor-delta-badge ${esPositivo ? 'positivo' : 'negativo'}`}>
                             {esPositivo ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                            <span>{esPositivo ? `+${item.delta_horas}` : item.delta_horas} hrs</span>
+                            <span>{formatearDeltaHorasMinutos(item.delta_horas)}</span>
                           </span>
                         </td>
                         <td className="td-left">

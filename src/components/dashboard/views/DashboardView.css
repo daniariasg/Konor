@@ -1,194 +1,167 @@
 .konor-dashboard-view {
   width: 100%;
+  font-family: 'Inter', 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0f172a;
+}
+
+.konor-dashboard-view * {
+  font-family: inherit;
+}
+
+.konor-tabular {
+  font-variant-numeric: tabular-nums;
 }
 
 .konor-dashboard-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .konor-dashboard-title {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: #06113c;
+  letter-spacing: -0.02em;
   margin: 0 0 4px 0;
 }
 
 .konor-dashboard-subtitle {
-  font-size: 0.825rem;
+  font-size: 0.85rem;
   color: #64748b;
   margin: 0;
 }
 
 /* ====================================================================
-   ACCESOS RÁPIDOS INTERACTIVOS
-   ==================================================================== */
-.konor-quick-actions-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.konor-action-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background-color: #ffffff;
-  border-radius: 12px;
-  cursor: pointer;
-  text-align: left;
-  border: 1px solid transparent;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.konor-action-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-}
-
-.konor-action-icon-box {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: transform 0.2s ease-in-out;
-}
-
-.konor-action-card:hover .konor-action-icon-box {
-  transform: scale(1.08);
-}
-
-.konor-action-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.konor-action-title {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #06113c;
-  line-height: 1.2;
-}
-
-.konor-action-desc {
-  font-size: 0.72rem;
-  color: #64748b;
-  margin-top: 2px;
-}
-
-/* Identidades temáticas de botones */
-.card-turnos {
-  border-color: #ccfbf1;
-  background: linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%);
-}
-.card-turnos:hover {
-  border-color: #43b0c4;
-}
-.icon-turnos {
-  background-color: rgba(67, 176, 196, 0.15);
-  color: #0d9488;
-}
-
-.card-nomina {
-  border-color: #dbeafe;
-  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
-}
-.card-nomina:hover {
-  border-color: #3b82f6;
-}
-.icon-nomina {
-  background-color: rgba(59, 130, 246, 0.15);
-  color: #2563eb;
-}
-
-.card-ledger {
-  border-color: #d1fae5;
-  background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%);
-}
-.card-ledger:hover {
-  border-color: #10b981;
-}
-.icon-ledger {
-  background-color: rgba(16, 185, 129, 0.15);
-  color: #059669;
-}
-
-.card-excel {
-  border-color: #fef3c7;
-  background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
-}
-.card-excel:hover {
-  border-color: #f59e0b;
-}
-.icon-excel {
-  background-color: rgba(245, 158, 11, 0.15);
-  color: #d97706;
-}
-
-/* ====================================================================
-   TARJETAS KPI
+   1. TARJETAS KPI (ESTILO LIMPIO CON ACENTO SUPERIOR DE 3PX)
    ==================================================================== */
 .konor-dashboard-grid-kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 20px;
 }
 
+@media (max-width: 1024px) {
+  .konor-dashboard-grid-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .konor-dashboard-grid-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
 .konor-kpi-card {
+  position: relative;
+  overflow: hidden;
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  border-radius: 12px;
+  padding: 20px 18px 18px 18px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.konor-kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: #cbd5e1;
+}
+
+.konor-kpi-card.kpi-presupuesto::before {
+  background-color: #43b0c4;
+}
+.konor-kpi-card.kpi-presupuesto .konor-kpi-icon-wrap {
+  background-color: rgba(67, 176, 196, 0.14);
+  color: #0e7490;
+}
+
+.konor-kpi-card.kpi-horas::before {
+  background-color: #2563eb;
+}
+.konor-kpi-card.kpi-horas .konor-kpi-icon-wrap {
+  background-color: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.konor-kpi-card.kpi-turnos::before {
+  background-color: #059669;
+}
+.konor-kpi-card.kpi-turnos .konor-kpi-icon-wrap {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.konor-kpi-card.kpi-listas::before {
+  background-color: #cbd5e1;
+}
+.konor-kpi-card.kpi-listas.is-danger::before {
+  background-color: #dc2626;
 }
 
 .konor-kpi-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .konor-kpi-label {
-  font-size: 0.68rem;
-  font-weight: 800;
+  font-size: 0.7rem;
+  font-weight: 700;
   color: #64748b;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .konor-kpi-icon-wrap {
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+.konor-kpi-icon-wrap.is-danger {
+  background-color: #fee2e2;
+  color: #dc2626;
 }
 
 .konor-kpi-value {
-  font-size: 1.45rem;
+  font-size: 1.7rem;
   font-weight: 800;
   color: #06113c;
-  font-family: monospace;
-  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.konor-kpi-value.is-danger {
+  color: #dc2626;
 }
 
 .konor-kpi-footer {
-  font-size: 0.72rem;
-  color: #94a3b8;
+  font-size: 0.76rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ====================================================================
-   GRILLA PRINCIPAL
+   2. GRILLA PRINCIPAL: PRESUPUESTO + 2x2 A LA IZQUIERDA, CONTROL A LA DERECHA
    ==================================================================== */
 .konor-dashboard-main-grid {
   display: grid;
@@ -203,14 +176,28 @@
   }
 }
 
+.konor-left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .konor-dashboard-card {
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 20px 22px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
   display: flex;
   flex-direction: column;
+}
+
+.konor-card-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .konor-dashboard-card-title {
@@ -220,12 +207,41 @@
   margin: 0;
 }
 
+.konor-pct-badge {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0e7490;
+  font-variant-numeric: tabular-nums;
+}
+
+.konor-card-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  background-color: #f1f5f9;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.konor-card-pill.ok {
+  background-color: #ecfdf5;
+  color: #047857;
+}
+
+.konor-card-pill.alert {
+  background-color: #fef2f2;
+  color: #b91c1c;
+}
+
+/* Presupuesto */
 .konor-progress-bar-bg {
   width: 100%;
-  height: 8px;
+  height: 9px;
   background-color: #f1f5f9;
   border-radius: 9999px;
   overflow: hidden;
+  margin-bottom: 18px;
 }
 
 .konor-progress-bar-fill {
@@ -237,62 +253,217 @@
 .konor-presupuesto-breakdown {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  padding-top: 14px;
   border-top: 1px solid #f1f5f9;
-  padding-top: 12px;
-  margin-bottom: 16px;
 }
 
 .konor-breakdown-item {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  padding: 0 14px;
+}
+
+.konor-breakdown-item:first-child {
+  padding-left: 0;
+}
+
+.konor-breakdown-item + .konor-breakdown-item {
+  border-left: 1px solid #f1f5f9;
 }
 
 .konor-breakdown-item .label {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
+  font-weight: 500;
   color: #64748b;
 }
 
 .konor-breakdown-item .value {
-  font-size: 0.95rem;
-  font-family: monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #06113c;
+  font-variant-numeric: tabular-nums;
 }
 
-.konor-finanzas-info-box {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 12px;
+.konor-breakdown-item .value.is-positive {
+  color: #059669;
 }
 
-/* ====================================================================
-   LISTAS OPERATIVAS (PANEL DERECHO)
-   ==================================================================== */
-.konor-tag-alerta-header {
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: #dc2626;
-  letter-spacing: 0.05em;
+/* Accesos Rápidos en Grilla 2x2 */
+.konor-quick-actions-grid-2x2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.konor-empty-operativo {
+@media (max-width: 560px) {
+  .konor-quick-actions-grid-2x2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.konor-action-card {
   display: flex;
   align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.konor-action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(6, 17, 60, 0.08);
+}
+
+.konor-action-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #ffffff;
+  transition: transform 0.18s ease;
+}
+
+.konor-action-card:hover .konor-action-icon-box {
+  transform: scale(1.05);
+}
+
+.konor-action-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.konor-action-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #06113c;
+  line-height: 1.25;
+}
+
+.konor-action-desc {
+  font-size: 0.74rem;
+  color: #64748b;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.konor-action-arrow {
+  color: #cbd5e1;
+  flex-shrink: 0;
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.konor-action-card:hover .konor-action-arrow {
+  transform: translateX(3px);
+  color: #06113c;
+}
+
+.card-turnos:hover { border-color: #43b0c4; }
+.icon-turnos {
+  background-color: #43b0c4;
+  box-shadow: 0 3px 8px rgba(67, 176, 196, 0.35);
+}
+
+.card-nomina:hover { border-color: #2563eb; }
+.icon-nomina {
+  background-color: #2563eb;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
+}
+
+.card-ledger:hover { border-color: #059669; }
+.icon-ledger {
+  background-color: #059669;
+  box-shadow: 0 3px 8px rgba(5, 150, 105, 0.3);
+}
+
+.card-excel:hover { border-color: #d97706; }
+.icon-excel {
+  background-color: #d97706;
+  box-shadow: 0 3px 8px rgba(217, 119, 6, 0.3);
+}
+
+/* Panel Derecho: Control Operativo */
+.konor-operativo-sections {
+  display: flex;
+  flex-direction: column;
+}
+
+.konor-operativo-block {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  padding: 10px 12px;
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  color: #166534;
+  padding: 10px 0;
+}
+
+.konor-operativo-block:first-child {
+  padding-top: 0;
+}
+
+.konor-operativo-block:last-child {
+  padding-bottom: 0;
+}
+
+.konor-operativo-block + .konor-operativo-block {
+  border-top: 1px solid #f1f5f9;
+}
+
+.konor-operativo-subheader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.konor-tag-alerta-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.konor-tag-alerta-header.is-danger {
+  color: #dc2626;
+}
+
+.konor-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 0.84rem;
+  color: #334155;
+}
+
+.konor-status-row svg {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.konor-status-row strong {
+  color: #06113c;
+  font-weight: 600;
+  margin-right: 4px;
 }
 
 .konor-scrollable-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 145px; /* Altura para mostrar los primeros 3 registros con scroll */
+  max-height: 150px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -310,12 +481,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
+  padding: 8px 10px;
   background-color: #fef2f2;
   border: 1px solid #fee2e2;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .konor-compact-turn-row:hover {
@@ -330,9 +501,9 @@
   background-color: #dc2626;
   color: #ffffff;
   border: none;
-  border-radius: 4px;
-  padding: 3px 8px;
-  font-size: 0.7rem;
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -341,8 +512,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
-  border-radius: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
 }
 
 .konor-compact-alert-row.danger {
@@ -356,11 +527,12 @@
 }
 
 .konor-badge-horas-compact {
-  font-family: monospace;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
 }
 
 .konor-badge-horas-compact.danger {
